@@ -25,11 +25,15 @@ object OfflineCacheManager {
                     course.startTime?.let { put("startTime", it) }
                     course.endTime?.let { put("endTime", it) }
                     course.startDate?.let {
-                        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                            timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        }
                         put("start", fmt.format(it))
                     }
                     course.endDate?.let {
-                        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                            timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        }
                         put("end", fmt.format(it))
                     }
                     course.sessionType?.let { put("sessionType", it) }
@@ -78,11 +82,12 @@ object OfflineCacheManager {
         }
     }
 
-    private const val GRADES_CACHE_FILE = "efrei_grades_cache.json"
+    private const val GRADES_CACHE_PREFIX = "efrei_grades_cache_"
 
-    fun saveGrades(context: Context, grades: List<StudentGrade>) {
+    fun saveGrades(context: Context, grades: List<StudentGrade>, schoolYear: String) {
         try {
-            val file = File(context.filesDir, GRADES_CACHE_FILE)
+            val safeYear = schoolYear.replace("/", "-")
+            val file = File(context.filesDir, "${GRADES_CACHE_PREFIX}${safeYear}.json")
             val jsonArray = JSONArray()
             grades.forEach { grade ->
                 val obj = JSONObject().apply {
@@ -90,6 +95,7 @@ object OfflineCacheManager {
                     put("gradeValue", grade.gradeValue)
                     put("details", grade.details)
                     put("date", grade.date)
+                    put("ue", grade.ue)
                     grade.average?.let { put("average", it) }
                     grade.semester?.let { put("semester", it) }
                 }
@@ -101,9 +107,10 @@ object OfflineCacheManager {
         }
     }
 
-    fun loadGrades(context: Context): List<StudentGrade> {
+    fun loadGrades(context: Context, schoolYear: String): List<StudentGrade> {
         return try {
-            val file = File(context.filesDir, GRADES_CACHE_FILE)
+            val safeYear = schoolYear.replace("/", "-")
+            val file = File(context.filesDir, "${GRADES_CACHE_PREFIX}${safeYear}.json")
             if (!file.exists()) return emptyList()
             val text = file.readText()
             val jsonArray = JSONArray(text)
@@ -116,6 +123,7 @@ object OfflineCacheManager {
                         gradeValue = obj.optString("gradeValue", ""),
                         details = obj.optString("details", ""),
                         date = obj.optString("date", ""),
+                        ue = obj.optString("ue", "Modules Généraux"),
                         average = if (obj.has("average")) obj.optString("average") else null,
                         semester = if (obj.has("semester")) obj.optString("semester") else null
                     )
@@ -133,6 +141,7 @@ data class StudentGrade(
     val gradeValue: String,
     val details: String,
     val date: String,
+    val ue: String = "Modules Généraux",
     val average: String? = null,
     val semester: String? = null
 )

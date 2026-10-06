@@ -36,8 +36,8 @@ data class CourseEvent(
     val teachers: List<String>
 ) {
     companion object {
-        private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("Europe/Paris")
+        private val isoUtcFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
         }
 
         fun fromJson(json: JSONObject): CourseEvent {
@@ -66,9 +66,8 @@ data class CourseEvent(
             fun parseIso(s: String?): Date? {
                 if (s.isNullOrBlank()) return null
                 return try {
-                    // strip timezone offset if standard simpledateformat
                     val clean = if (s.length >= 19) s.substring(0, 19) else s
-                    isoFormat.parse(clean)
+                    isoUtcFormat.parse(clean)
                 } catch (e: Exception) { null }
             }
 

@@ -110,6 +110,9 @@ class MainActivity : AppCompatActivity() {
     private var selectedDayCal: Calendar = Calendar.getInstance(Locale.FRANCE)
     private var allCachedCourses: List<CourseEvent> = emptyList()
     private var isMonthExpanded: Boolean = false
+    private var lastFetchedMonthKey: String = ""
+    private lateinit var spinnerSchoolYear: android.widget.Spinner
+    private var isYearSpinnerInitialized: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
@@ -174,6 +177,7 @@ class MainActivity : AppCompatActivity() {
         layoutGradesList = findViewById(R.id.layoutGradesList)
         tvGeneralAverage = findViewById(R.id.tvGeneralAverage)
         tvGradesSemesterLabel = findViewById(R.id.tvGradesSemesterLabel)
+        spinnerSchoolYear = findViewById(R.id.spinnerSchoolYear)
 
         rgThemeMode = findViewById(R.id.rgThemeMode)
         rbThemeSystem = findViewById(R.id.rbThemeSystem)
@@ -418,32 +422,74 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvGeneralAverage: TextView
     private lateinit var tvGradesSemesterLabel: TextView
 
-    private fun loadStudentGrades() {
+    private var currentSelectedYear: String = ""
+
+    private fun setupSchoolYearSpinner() {
+        if (isYearSpinnerInitialized) return
+        isYearSpinnerInitialized = true
+
+        val currentYear = getCurrentAcademicYear()
+        currentSelectedYear = currentYear
+
+        // Generate past 4 academic years + current, e.g. 2026-2027, 2025-2026, 2024-2025, 2023-2024
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH)
+        val baseYear = if (month >= 8) year else year - 1
+
+        val yearsList = mutableListOf<String>()
+        for (i in 0..3) {
+            val y = baseYear - i
+            yearsList.add("$y-${y + 1}")
+        }
+
+        val spinnerAdapter = android.widget.ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            yearsList
+        )
+        spinnerSchoolYear.adapter = spinnerAdapter
+        spinnerSchoolYear.setSelection(0)
+
+        spinnerSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = yearsList[position]
+                if (selected != currentSelectedYear) {
+                    currentSelectedYear = selected
+                    loadStudentGrades(selected)
+                }
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun loadStudentGrades(schoolYear: String = getCurrentAcademicYear()) {
+        setupSchoolYearSpinner()
         layoutGradesList.removeAllViews()
 
-        // 1. Load cached grades first
-        val cachedGrades = OfflineCacheManager.loadGrades(this)
+        // 1. Load cached grades first for this specific year
+        val cachedGrades = OfflineCacheManager.loadGrades(this, schoolYear)
         if (cachedGrades.isNotEmpty()) {
-            displayGrades(cachedGrades)
+            displayGradesGroupedByUe(cachedGrades, schoolYear)
         }
 
         // 2. Fetch fresh grades asynchronously from official API
         lifecycleScope.launch {
             try {
-                val currentYear = getCurrentAcademicYear()
                 val freshGrades = withContext(Dispatchers.IO) {
-                    fetchGradesFromApi(currentYear)
+                    fetchGradesFromApi(schoolYear)
                 }
 
                 if (freshGrades.isNotEmpty()) {
-                    OfflineCacheManager.saveGrades(this@MainActivity, freshGrades)
-                    displayGrades(freshGrades)
+                    OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
+                    displayGradesGroupedByUe(freshGrades, schoolYear)
                 } else if (cachedGrades.isEmpty()) {
-                    displayGrades(getDefaultSampleGrades())
+                    displayGradesGroupedByUe(getDefaultSampleGrades(schoolYear), schoolYear)
                 }
             } catch (e: Exception) {
                 if (cachedGrades.isEmpty()) {
-                    displayGrades(getDefaultSampleGrades())
+                    displayGradesGroupedByUe(getDefaultSampleGrades(schoolYear), schoolYear)
                 }
             }
         }
@@ -460,52 +506,124 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun displayGrades(grades: List<StudentGrade>) {
+    private fun displayGradesGroupedByUe(grades: List<StudentGrade>, schoolYear: String) {
         layoutGradesList.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
-        // Calculate or display overall average
+        // Calculate overall average across all valid numeric grades
         var totalPoints = 0.0
-        var count = 0
+        var totalCount = 0
         grades.forEach { grade ->
             val numStr = grade.gradeValue.split("/").firstOrNull()?.trim()?.replace(",", ".")
             numStr?.toDoubleOrNull()?.let {
                 totalPoints += it
-                count++
+                totalCount++
             }
         }
 
-        if (count > 0) {
-            val avg = totalPoints / count
+        if (totalCount > 0) {
+            val avg = totalPoints / totalCount
             tvGeneralAverage.text = String.format(Locale.FRANCE, "%.1f", avg)
+        } else {
+            tvGeneralAverage.text = "--"
         }
 
-        val currentYear = getCurrentAcademicYear()
-        tvGradesSemesterLabel.text = "Année académique $currentYear"
+        tvGradesSemesterLabel.text = "Année académique $schoolYear"
 
-        grades.forEach { item ->
-            val gradeCard = inflater.inflate(R.layout.item_grade_card, layoutGradesList, false)
-            val tvName: TextView = gradeCard.findViewById(R.id.tvCourseName)
-            val tvValue: TextView = gradeCard.findViewById(R.id.tvGradeValue)
-            val tvDetails: TextView = gradeCard.findViewById(R.id.tvGradeDetails)
-            val tvDate: TextView = gradeCard.findViewById(R.id.tvGradeDate)
+        // Group by UE
+        val groupedByUe = grades.groupBy { it.ue }
 
-            tvName.text = item.courseName
-            tvValue.text = item.gradeValue
-            tvDetails.text = item.details
-            tvDate.text = item.date
+        groupedByUe.forEach { (ueName, ueGrades) ->
+            val ueGroupView = inflater.inflate(R.layout.item_ue_group, layoutGradesList, false)
+            val tvUeTitle: TextView = ueGroupView.findViewById(R.id.tvUeTitle)
+            val tvUeAverageBadge: TextView = ueGroupView.findViewById(R.id.tvUeAverageBadge)
+            val layoutUeGradesContainer: LinearLayout = ueGroupView.findViewById(R.id.layoutUeGradesContainer)
 
-            layoutGradesList.addView(gradeCard)
+            tvUeTitle.text = ueName
+
+            // Calculate UE sub-average
+            var uePoints = 0.0
+            var ueCount = 0
+            ueGrades.forEach { g ->
+                val numStr = g.gradeValue.split("/").firstOrNull()?.trim()?.replace(",", ".")
+                numStr?.toDoubleOrNull()?.let {
+                    uePoints += it
+                    ueCount++
+                }
+            }
+
+            if (ueCount > 0) {
+                val ueAvg = uePoints / ueCount
+                tvUeAverageBadge.visibility = View.VISIBLE
+                tvUeAverageBadge.text = String.format(Locale.FRANCE, "Moy. %.1f", ueAvg)
+            } else {
+                tvUeAverageBadge.visibility = View.GONE
+            }
+
+            // Populate grade cards inside this UE container
+            ueGrades.forEach { item ->
+                val gradeCard = inflater.inflate(R.layout.item_grade_card, layoutUeGradesContainer, false)
+                val tvName: TextView = gradeCard.findViewById(R.id.tvCourseName)
+                val tvValue: TextView = gradeCard.findViewById(R.id.tvGradeValue)
+                val tvDetails: TextView = gradeCard.findViewById(R.id.tvGradeDetails)
+                val tvDate: TextView = gradeCard.findViewById(R.id.tvGradeDate)
+
+                tvName.text = item.courseName
+                tvValue.text = item.gradeValue
+                tvDetails.text = item.details
+                tvDate.text = item.date
+
+                layoutUeGradesContainer.addView(gradeCard)
+            }
+
+            layoutGradesList.addView(ueGroupView)
         }
     }
 
-    private fun getDefaultSampleGrades(): List<StudentGrade> {
+    private fun getDefaultSampleGrades(schoolYear: String): List<StudentGrade> {
         return listOf(
-            StudentGrade("Architecture Cloud & Microservices", "16.5 / 20", "Projet Final • Coeff 3", "28/09/2026"),
-            StudentGrade("DevOps, CI/CD & Kubernetes", "15.0 / 20", "TP Évalué • Coeff 2", "22/09/2026"),
-            StudentGrade("Sécurité des Applications Web", "14.0 / 20", "Partiel Écrit • Coeff 2", "15/09/2026"),
-            StudentGrade("Management de Projet Agile", "17.0 / 20", "Soutenance • Coeff 1.5", "10/09/2026"),
-            StudentGrade("Anglais Professionnel & Toeic", "15.5 / 20", "Contrôle Continu • Coeff 1", "04/09/2026")
+            StudentGrade(
+                courseName = "Architecture Cloud & Microservices",
+                gradeValue = "16.5 / 20",
+                details = "Projet Final • Coeff 3",
+                date = "28/09/$schoolYear",
+                ue = "UE 1 : Génie Logiciel & Cloud"
+            ),
+            StudentGrade(
+                courseName = "DevOps, CI/CD & Kubernetes",
+                gradeValue = "15.0 / 20",
+                details = "TP Évalué • Coeff 2",
+                date = "22/09/$schoolYear",
+                ue = "UE 1 : Génie Logiciel & Cloud"
+            ),
+            StudentGrade(
+                courseName = "Sécurité des Applications Web",
+                gradeValue = "14.0 / 20",
+                details = "Partiel Écrit • Coeff 2",
+                date = "15/09/$schoolYear",
+                ue = "UE 2 : Sécurité des Systèmes"
+            ),
+            StudentGrade(
+                courseName = "Audit & Pentest Web",
+                gradeValue = "16.0 / 20",
+                details = "Contrôle Continu • Coeff 2",
+                date = "12/09/$schoolYear",
+                ue = "UE 2 : Sécurité des Systèmes"
+            ),
+            StudentGrade(
+                courseName = "Management de Projet Agile",
+                gradeValue = "17.0 / 20",
+                details = "Soutenance • Coeff 1.5",
+                date = "10/09/$schoolYear",
+                ue = "UE 3 : Management & Communication"
+            ),
+            StudentGrade(
+                courseName = "Anglais Professionnel & Toeic",
+                gradeValue = "15.5 / 20",
+                details = "Contrôle Continu • Coeff 1",
+                date = "04/09/$schoolYear",
+                ue = "UE 3 : Management & Communication"
+            )
         )
     }
 
@@ -546,7 +664,6 @@ class MainActivity : AppCompatActivity() {
             val response = conn.inputStream.bufferedReader().use { it.readText() }
             val list = mutableListOf<StudentGrade>()
             try {
-                // Efrei grades API can return a JSON array or a JSON object with semesters/modules
                 if (response.trim().startsWith("[")) {
                     val arr = JSONArray(response)
                     for (i in 0 until arr.length()) {
@@ -562,7 +679,7 @@ class MainActivity : AppCompatActivity() {
                         if (value is JSONArray) {
                             for (i in 0 until value.length()) {
                                 val item = value.optJSONObject(i) ?: continue
-                                parseGradeObject(item)?.let { list.add(it) }
+                                parseGradeObject(item, defaultUe = key)?.let { list.add(it) }
                             }
                         }
                     }
@@ -577,7 +694,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun parseGradeObject(obj: JSONObject): StudentGrade? {
+    private fun parseGradeObject(obj: JSONObject, defaultUe: String = "Modules Généraux"): StudentGrade? {
         val courseName = obj.optString("courseName", obj.optString("name", obj.optString("module", "")))
         if (courseName.isBlank()) return null
 
@@ -586,12 +703,14 @@ class MainActivity : AppCompatActivity() {
 
         val details = obj.optString("details", obj.optString("type", obj.optString("comment", "Évaluation")))
         val date = obj.optString("date", "")
+        val ue = obj.optString("ue", obj.optString("ueName", defaultUe)).ifBlank { "Modules Généraux" }
 
         return StudentGrade(
             courseName = courseName,
             gradeValue = formattedGrade,
             details = details,
-            date = date
+            date = date,
+            ue = ue
         )
     }
 
@@ -679,14 +798,31 @@ class MainActivity : AppCompatActivity() {
         val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.FRANCE)
         tvCurrentPeriodLabel.text = monthFormat.format(currentWeekCal.time).replaceFirstChar { it.uppercase() }
 
-        // Step 1: Render immediately from cache
+        // Step 1: Render immediately from cache in-memory
         displayPlanning(allCachedCourses)
+
+        // Generate a cache key for the month, e.g. "2026-10"
+        val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.US)
+        val targetMonthKey = monthKeyFormat.format(currentWeekCal.time)
+
+        // Check if we already have courses cached for this week or month
+        val hasCoursesForCurrentWeek = allCachedCourses.any { course ->
+            course.startDate != null && course.startDate >= startOfWeek && course.startDate <= endOfWeek
+        }
+
+        // Only hit network if:
+        // 1) User explicitly swiped to refresh (pull-to-refresh)
+        // 2) We haven't fetched this month yet in this session AND either has no courses or is initial load
+        if (!isSwipe && hasCoursesForCurrentWeek && lastFetchedMonthKey == targetMonthKey) {
+            // Instant render from cache without network lag
+            return
+        }
 
         if (!isSwipe && allCachedCourses.isEmpty()) {
             layoutLoading.visibility = View.VISIBLE
         }
 
-        // Step 2: Fetch fresh data from network (fetch whole month range so month view also has data)
+        // Step 2: Fetch fresh data from network in background
         lifecycleScope.launch {
             try {
                 val calMonth = Calendar.getInstance(Locale.FRANCE).apply {
@@ -709,6 +845,8 @@ class MainActivity : AppCompatActivity() {
                 val freshCourses = withContext(Dispatchers.IO) {
                     fetchPlanningFromApi(startMonth, endMonth)
                 }
+
+                lastFetchedMonthKey = targetMonthKey
 
                 if (freshCourses.isNotEmpty()) {
                     OfflineCacheManager.saveCourses(this@MainActivity, freshCourses)
