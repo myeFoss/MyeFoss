@@ -531,13 +531,16 @@ class MainActivity : AppCompatActivity() {
         // 2. Fetch fresh grades asynchronously from official API
         lifecycleScope.launch {
             try {
+                android.util.Log.d("MyeFossGrades", "Fetching grades for year: '$schoolYear'...")
                 val freshGrades = withContext(Dispatchers.IO) {
                     fetchGradesFromApi(schoolYear)
                 }
+                android.util.Log.d("MyeFossGrades", "Received ${freshGrades.size} grades for year: '$schoolYear'")
 
                 OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
                 displayGradesGroupedByUe(freshGrades, schoolYear)
             } catch (e: Exception) {
+                android.util.Log.e("MyeFossGrades", "Error fetching grades: ${e.message}", e)
                 // Keep displaying cached or empty state without inserting fictitious grades
                 if (cachedGrades.isEmpty()) {
                     displayGradesGroupedByUe(emptyList(), schoolYear)
@@ -640,9 +643,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchGradesFromApi(schoolYear: String): List<StudentGrade> {
-        val urlStr = "https://www.myefrei.fr/api/rest/student/grades?schoolYear=" + URLEncoder.encode(schoolYear, "UTF-8")
+        val encodedYear = URLEncoder.encode(schoolYear, "UTF-8")
+        val endpointsToTry = listOf(
+            "https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encodedYear",
+            "https://www.myefrei.fr/api-mobile/rest/student/grades?schoolYear=$encodedYear"
+        )
+
         val cookieManager = CookieManager.getInstance()
-        val directCookies = cookieManager.getCookie(urlStr) ?: ""
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/grades") ?: ""
         val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
         val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
 
@@ -660,76 +668,104 @@ class MainActivity : AppCompatActivity() {
         }
         val mergedCookies = cookieMap.values.joinToString("; ")
 
-        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 15000
-            readTimeout = 15000
-            setRequestProperty("Accept", "application/json, text/plain, */*")
-            setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
-            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
-            setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/grades")
-            setRequestProperty("Origin", "https://www.myefrei.fr")
-            setRequestProperty("Sec-Fetch-Dest", "empty")
-            setRequestProperty("Sec-Fetch-Mode", "cors")
-            setRequestProperty("Sec-Fetch-Site", "same-origin")
-            if (mergedCookies.isNotBlank()) {
-                setRequestProperty("Cookie", mergedCookies)
-            }
-        }
-
-        val code = conn.responseCode
-        if (code in 200..299) {
-            val response = conn.inputStream.bufferedReader().use { it.readText() }
-            val list = mutableListOf<StudentGrade>()
+        for (urlStr in endpointsToTry) {
             try {
-                if (response.trim().startsWith("[")) {
-                    val arr = JSONArray(response)
-                    for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
-                        parseGradeObject(obj)?.let { list.add(it) }
-                    }
-                } else if (response.trim().startsWith("{")) {
-                    val root = JSONObject(response)
-                    val keys = root.keys()
-                    while (keys.hasNext()) {
-                        val key = keys.next()
-                        val value = root.opt(key)
-                        if (value is JSONArray) {
-                            for (i in 0 until value.length()) {
-                                val item = value.optJSONObject(i) ?: continue
-                                parseGradeObject(item, defaultUe = key)?.let { list.add(it) }
-                            }
-                        }
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 15000
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/grades")
+                    setRequestProperty("Origin", "https://www.myefrei.fr")
+                    setRequestProperty("Sec-Fetch-Dest", "empty")
+                    setRequestProperty("Sec-Fetch-Mode", "cors")
+                    setRequestProperty("Sec-Fetch-Site", "same-origin")
+                    if (mergedCookies.isNotBlank()) {
+                        setRequestProperty("Cookie", mergedCookies)
                     }
                 }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    android.util.Log.d("MyeFossGrades", "Endpoint $urlStr SUCCESS HTTP $code. Length: ${response.length}")
+                    val list = parseAnyGradesResponse(response)
+                    if (list.isNotEmpty()) {
+                        return list
+                    }
+                } else {
+                    android.util.Log.w("MyeFossGrades", "Endpoint $urlStr failed with HTTP $code")
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("MyeFossGrades", "Endpoint $urlStr exception: ${e.message}")
             }
-            return list
-        } else {
-            val error = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-            throw Exception("HTTP $code: $error")
         }
+
+        return emptyList()
     }
 
-    private fun parseGradeObject(obj: JSONObject, defaultUe: String = "Modules Généraux"): StudentGrade? {
-        val courseName = obj.optString("courseName", obj.optString("name", obj.optString("module", "")))
-        if (courseName.isBlank()) return null
+    private fun parseAnyGradesResponse(response: String): List<StudentGrade> {
+        val list = mutableListOf<StudentGrade>()
+        try {
+            val trimmed = response.trim()
+            if (trimmed.startsWith("[")) {
+                val arr = JSONArray(trimmed)
+                for (i in 0 until arr.length()) {
+                    val item = arr.opt(i)
+                    if (item is JSONObject) {
+                        extractGradesRecursive(item, "Modules Généraux", list)
+                    }
+                }
+            } else if (trimmed.startsWith("{")) {
+                val root = JSONObject(trimmed)
+                extractGradesRecursive(root, "Modules Généraux", list)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
 
-        val gradeVal = obj.optString("grade", obj.optString("value", obj.optString("result", "")))
-        val formattedGrade = if (gradeVal.contains("/")) gradeVal else if (gradeVal.isNotBlank()) "$gradeVal / 20" else "-- / 20"
+    private fun extractGradesRecursive(obj: JSONObject, currentUe: String, outList: MutableList<StudentGrade>) {
+        // Detect if this object itself has a UE name
+        val ueName = obj.optString("ue", obj.optString("ueName", obj.optString("unit", obj.optString("title", currentUe)))).ifBlank { currentUe }
 
-        val details = obj.optString("details", obj.optString("type", obj.optString("comment", "Évaluation")))
-        val date = obj.optString("date", "")
-        val ue = obj.optString("ue", obj.optString("ueName", defaultUe)).ifBlank { "Modules Généraux" }
+        // 1. Direct grade check
+        val courseName = obj.optString("courseName", obj.optString("course", obj.optString("module", obj.optString("subject", obj.optString("name", "")))))
+        val gradeVal = obj.optString("grade", obj.optString("value", obj.optString("note", obj.optString("result", ""))))
 
-        return StudentGrade(
-            courseName = courseName,
-            gradeValue = formattedGrade,
-            details = details,
-            date = date,
-            ue = ue
-        )
+        if (courseName.isNotBlank() && (gradeVal.isNotBlank() || obj.has("grade") || obj.has("value") || obj.has("note"))) {
+            val formattedGrade = if (gradeVal.contains("/")) gradeVal else if (gradeVal.isNotBlank()) "$gradeVal / 20" else "-- / 20"
+            val details = obj.optString("details", obj.optString("type", obj.optString("comment", "Évaluation")))
+            val date = obj.optString("date", "")
+            outList.add(
+                StudentGrade(
+                    courseName = courseName,
+                    gradeValue = formattedGrade,
+                    details = details,
+                    date = date,
+                    ue = ueName
+                )
+            )
+        }
+
+        // 2. Sub-arrays inspection (e.g. "grades", "modules", "courses", "evaluations", "results")
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val child = obj.opt(key)
+            if (child is JSONArray) {
+                val derivedUe = if (key.contains("ue", ignoreCase = true) || ueName != "Modules Généraux") ueName else key
+                for (i in 0 until child.length()) {
+                    val childObj = child.optJSONObject(i) ?: continue
+                    extractGradesRecursive(childObj, derivedUe, outList)
+                }
+            } else if (child is JSONObject && !key.equals("student", ignoreCase = true)) {
+                extractGradesRecursive(child, ueName, outList)
+            }
+        }
     }
 
 

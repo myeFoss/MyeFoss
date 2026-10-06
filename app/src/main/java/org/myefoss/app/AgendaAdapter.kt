@@ -41,6 +41,7 @@ class AgendaAdapter(
         private val viewTodayDot: View = itemView.findViewById(R.id.viewTodayDot)
         private val tvTodayBadge: TextView = itemView.findViewById(R.id.tvTodayBadge)
         private val tvEmptyDay: TextView = itemView.findViewById(R.id.tvEmptyDay)
+        private val cardEmptyDay: View = itemView.findViewById(R.id.cardEmptyDay)
         private val layoutCoursesContainer: LinearLayout = itemView.findViewById(R.id.layoutCoursesContainer)
 
         fun bind(section: DaySection) {
@@ -52,9 +53,9 @@ class AgendaAdapter(
             layoutCoursesContainer.removeAllViews()
 
             if (section.courses.isEmpty()) {
-                tvEmptyDay.visibility = View.VISIBLE
+                cardEmptyDay.visibility = View.VISIBLE
             } else {
-                tvEmptyDay.visibility = View.GONE
+                cardEmptyDay.visibility = View.GONE
                 val inflater = LayoutInflater.from(ctx)
 
                 section.courses.forEach { course ->

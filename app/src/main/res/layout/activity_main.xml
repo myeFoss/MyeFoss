@@ -768,15 +768,15 @@
                                     android:layout_marginTop="4dp"
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="14sp"
-                                    android:text="Votre emploi du temps et votre scolarité en un coup d'œil, fluide et disponible même sans connexion internet." />
+                                    android:text="Version 1.0 • Fait avec passion" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="12dp"
+                                    android:layout_marginTop="8dp"
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="12sp"
-                                    android:alpha="0.8"
+                                    android:alpha="0.7"
                                     android:text="@string/legal_disclaimer" />
                             </LinearLayout>
 
