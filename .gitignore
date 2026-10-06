@@ -7,6 +7,8 @@ app/build/
 
 # Local configuration
 local.properties
+*.jks
+*.keystore
 
 # OS files
 .DS_Store
