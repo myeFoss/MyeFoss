@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mon Agenda Efrei</title>
+  <!-- Local Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p class="loading-text">Chargement de votre emploi du temps...</p>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="hidden login-screen">
+    <div class="login-container">
+      <div class="login-logo">
+        <i data-lucide="calendar"></i>
+      </div>
+      <h2 class="login-title">Efrei Agenda</h2>
+      <p class="login-subtitle">
+        Accédez rapidement à votre emploi du temps Efrei
+      </p>
+      
+      <div class="login-card">
+        <button id="btn-login" class="btn btn-primary">
+          <i data-lucide="log-in"></i>
+          Se connecter avec Efrei Portal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP WINDOW (AGENDA) -->
+  <div id="app-screen" class="hidden app-screen">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-badge">
+          <i data-lucide="calendar-range"></i>
+        </div>
+        <div>
+          <h1 class="app-title">Mon Agenda</h1>
+          <p id="user-info" class="user-info">Chargement...</p>
+        </div>
+      </div>
+      <button id="btn-logout" class="btn-logout" title="Se déconnecter">
+        <i data-lucide="log-out"></i>
+      </button>
+    </header>
+
+    <!-- Week Navigator -->
+    <div class="week-nav">
+      <button id="btn-prev-week" class="nav-arrow-btn">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <div class="week-label-container">
+        <span id="current-week-label" class="week-label">Semaine du ...</span>
+      </div>
+      <button id="btn-next-week" class="nav-arrow-btn">
+        <i data-lucide="chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- Calendar View (List of Days) -->
+    <div id="agenda-list" class="agenda-list">
+      <!-- Days dynamically injected here -->
+    </div>
+  </div>
+
+  <!-- JavaScript logic -->
+  <script src="script.js"></script>
+</body>
+</html>
