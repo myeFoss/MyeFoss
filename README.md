@@ -112,10 +112,34 @@ Altho I heavily used AI, I am still the master here. I control my tool, and my t
 
 ## Screenshots
 
-<!-- Add screenshots or screen recordings here -->
-| Planning | Grades | Absences | Settings |
+### Core Experience
+<div align="center">
+
+| Planning | Course Details | Grades & Average | Absences Tracking |
 | :---: | :---: | :---: | :---: |
-| _Screenshot_ | _Screenshot_ | _Screenshot_ | _Screenshot_ |
+| <img src="docs/screenshots/planning_default.png" width="220" alt="Planning View" /> | <img src="docs/screenshots/course_details.png" width="220" alt="Course Details BottomSheet" /> | <img src="docs/screenshots/grades.png" width="220" alt="Grades View" /> | <img src="docs/screenshots/absences.png" width="220" alt="Absences Tracking" /> |
+
+</div>
+
+<details>
+<summary><b>🎨 Theme Palettes & Customization (Click to expand)</b></summary>
+<br>
+
+<div align="center">
+
+| Light Theme | Dark Theme |
+| :---: | :---: |
+| <img src="docs/screenshots/settings_light.png" width="240" alt="Settings Light Mode" /> | <img src="docs/screenshots/settings_dark.png" width="240" alt="Settings Dark Mode" /> |
+
+<br>
+
+| Monet (System) | Emerald | Amethyst | Amber |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/theme_monet.png" width="200" alt="Monet Dynamic Theme" /> | <img src="docs/screenshots/theme_emerald.png" width="200" alt="Emerald Theme" /> | <img src="docs/screenshots/theme_purple.png" width="200" alt="Amethyst Theme" /> | <img src="docs/screenshots/theme_amber.png" width="200" alt="Amber Theme" /> |
+
+</div>
+
+</details>
 
 ---
 
