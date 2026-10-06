@@ -77,4 +77,62 @@ object OfflineCacheManager {
             emptyList()
         }
     }
+
+    private const val GRADES_CACHE_FILE = "efrei_grades_cache.json"
+
+    fun saveGrades(context: Context, grades: List<StudentGrade>) {
+        try {
+            val file = File(context.filesDir, GRADES_CACHE_FILE)
+            val jsonArray = JSONArray()
+            grades.forEach { grade ->
+                val obj = JSONObject().apply {
+                    put("courseName", grade.courseName)
+                    put("gradeValue", grade.gradeValue)
+                    put("details", grade.details)
+                    put("date", grade.date)
+                    grade.average?.let { put("average", it) }
+                    grade.semester?.let { put("semester", it) }
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadGrades(context: Context): List<StudentGrade> {
+        return try {
+            val file = File(context.filesDir, GRADES_CACHE_FILE)
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<StudentGrade>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    StudentGrade(
+                        courseName = obj.optString("courseName", ""),
+                        gradeValue = obj.optString("gradeValue", ""),
+                        details = obj.optString("details", ""),
+                        date = obj.optString("date", ""),
+                        average = if (obj.has("average")) obj.optString("average") else null,
+                        semester = if (obj.has("semester")) obj.optString("semester") else null
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
+
+data class StudentGrade(
+    val courseName: String,
+    val gradeValue: String,
+    val details: String,
+    val date: String,
+    val average: String? = null,
+    val semester: String? = null
+)

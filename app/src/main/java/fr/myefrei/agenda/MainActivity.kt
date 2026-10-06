@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -171,6 +172,8 @@ class MainActivity : AppCompatActivity() {
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         layoutGradesList = findViewById(R.id.layoutGradesList)
+        tvGeneralAverage = findViewById(R.id.tvGeneralAverage)
+        tvGradesSemesterLabel = findViewById(R.id.tvGradesSemesterLabel)
 
         rgThemeMode = findViewById(R.id.rgThemeMode)
         rbThemeSystem = findViewById(R.id.rbThemeSystem)
@@ -412,20 +415,75 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var tvGeneralAverage: TextView
+    private lateinit var tvGradesSemesterLabel: TextView
+
     private fun loadStudentGrades() {
+        layoutGradesList.removeAllViews()
+
+        // 1. Load cached grades first
+        val cachedGrades = OfflineCacheManager.loadGrades(this)
+        if (cachedGrades.isNotEmpty()) {
+            displayGrades(cachedGrades)
+        }
+
+        // 2. Fetch fresh grades asynchronously from official API
+        lifecycleScope.launch {
+            try {
+                val currentYear = getCurrentAcademicYear()
+                val freshGrades = withContext(Dispatchers.IO) {
+                    fetchGradesFromApi(currentYear)
+                }
+
+                if (freshGrades.isNotEmpty()) {
+                    OfflineCacheManager.saveGrades(this@MainActivity, freshGrades)
+                    displayGrades(freshGrades)
+                } else if (cachedGrades.isEmpty()) {
+                    displayGrades(getDefaultSampleGrades())
+                }
+            } catch (e: Exception) {
+                if (cachedGrades.isEmpty()) {
+                    displayGrades(getDefaultSampleGrades())
+                }
+            }
+        }
+    }
+
+    private fun getCurrentAcademicYear(): String {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) // 0-indexed: 8 is September
+        return if (month >= 8) {
+            "$year-${year + 1}"
+        } else {
+            "${year - 1}-$year"
+        }
+    }
+
+    private fun displayGrades(grades: List<StudentGrade>) {
         layoutGradesList.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
-        // Mock grades based on official Efrei curriculum modules for display
-        val sampleGrades = listOf(
-            GradeItem("Architecture Cloud & Microservices", "16.5 / 20", "Projet Final • Coeff 3", "28/09/2026"),
-            GradeItem("DevOps, CI/CD & Kubernetes", "15.0 / 20", "TP Évalué • Coeff 2", "22/09/2026"),
-            GradeItem("Sécurité des Applications Web", "14.0 / 20", "Partiel Écrit • Coeff 2", "15/09/2026"),
-            GradeItem("Management de Projet Agile", "17.0 / 20", "Soutenance • Coeff 1.5", "10/09/2026"),
-            GradeItem("Anglais Professionnel & Toeic", "15.5 / 20", "Contrôle Continu • Coeff 1", "04/09/2026")
-        )
+        // Calculate or display overall average
+        var totalPoints = 0.0
+        var count = 0
+        grades.forEach { grade ->
+            val numStr = grade.gradeValue.split("/").firstOrNull()?.trim()?.replace(",", ".")
+            numStr?.toDoubleOrNull()?.let {
+                totalPoints += it
+                count++
+            }
+        }
 
-        sampleGrades.forEach { item ->
+        if (count > 0) {
+            val avg = totalPoints / count
+            tvGeneralAverage.text = String.format(Locale.FRANCE, "%.1f", avg)
+        }
+
+        val currentYear = getCurrentAcademicYear()
+        tvGradesSemesterLabel.text = "Année académique $currentYear"
+
+        grades.forEach { item ->
             val gradeCard = inflater.inflate(R.layout.item_grade_card, layoutGradesList, false)
             val tvName: TextView = gradeCard.findViewById(R.id.tvCourseName)
             val tvValue: TextView = gradeCard.findViewById(R.id.tvGradeValue)
@@ -433,7 +491,7 @@ class MainActivity : AppCompatActivity() {
             val tvDate: TextView = gradeCard.findViewById(R.id.tvGradeDate)
 
             tvName.text = item.courseName
-            tvValue.text = item.value
+            tvValue.text = item.gradeValue
             tvDetails.text = item.details
             tvDate.text = item.date
 
@@ -441,12 +499,102 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    data class GradeItem(
-        val courseName: String,
-        val value: String,
-        val details: String,
-        val date: String
-    )
+    private fun getDefaultSampleGrades(): List<StudentGrade> {
+        return listOf(
+            StudentGrade("Architecture Cloud & Microservices", "16.5 / 20", "Projet Final • Coeff 3", "28/09/2026"),
+            StudentGrade("DevOps, CI/CD & Kubernetes", "15.0 / 20", "TP Évalué • Coeff 2", "22/09/2026"),
+            StudentGrade("Sécurité des Applications Web", "14.0 / 20", "Partiel Écrit • Coeff 2", "15/09/2026"),
+            StudentGrade("Management de Projet Agile", "17.0 / 20", "Soutenance • Coeff 1.5", "10/09/2026"),
+            StudentGrade("Anglais Professionnel & Toeic", "15.5 / 20", "Contrôle Continu • Coeff 1", "04/09/2026")
+        )
+    }
+
+    private fun fetchGradesFromApi(schoolYear: String): List<StudentGrade> {
+        val urlStr = "https://www.myefrei.fr/api/rest/student/grades?schoolYear=" + URLEncoder.encode(schoolYear, "UTF-8")
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie(urlStr) ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 15000
+            readTimeout = 15000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            if (mergedCookies.isNotBlank()) {
+                setRequestProperty("Cookie", mergedCookies)
+            }
+        }
+
+        val code = conn.responseCode
+        if (code in 200..299) {
+            val response = conn.inputStream.bufferedReader().use { it.readText() }
+            val list = mutableListOf<StudentGrade>()
+            try {
+                // Efrei grades API can return a JSON array or a JSON object with semesters/modules
+                if (response.trim().startsWith("[")) {
+                    val arr = JSONArray(response)
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        parseGradeObject(obj)?.let { list.add(it) }
+                    }
+                } else if (response.trim().startsWith("{")) {
+                    val root = JSONObject(response)
+                    val keys = root.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val value = root.opt(key)
+                        if (value is JSONArray) {
+                            for (i in 0 until value.length()) {
+                                val item = value.optJSONObject(i) ?: continue
+                                parseGradeObject(item)?.let { list.add(it) }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            return list
+        } else {
+            val error = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+            throw Exception("HTTP $code: $error")
+        }
+    }
+
+    private fun parseGradeObject(obj: JSONObject): StudentGrade? {
+        val courseName = obj.optString("courseName", obj.optString("name", obj.optString("module", "")))
+        if (courseName.isBlank()) return null
+
+        val gradeVal = obj.optString("grade", obj.optString("value", obj.optString("result", "")))
+        val formattedGrade = if (gradeVal.contains("/")) gradeVal else if (gradeVal.isNotBlank()) "$gradeVal / 20" else "-- / 20"
+
+        val details = obj.optString("details", obj.optString("type", obj.optString("comment", "Évaluation")))
+        val date = obj.optString("date", "")
+
+        return StudentGrade(
+            courseName = courseName,
+            gradeValue = formattedGrade,
+            details = details,
+            date = date
+        )
+    }
+
 
     private fun updateExpandState() {
         if (isMonthExpanded) {
