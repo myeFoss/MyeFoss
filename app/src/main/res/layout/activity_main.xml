@@ -1021,6 +1021,18 @@
                                     android:textSize="13sp" />
 
                             </LinearLayout>
+                            
+                            <!-- Discreet Footer Disclaimer -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="24dp"
+                                android:layout_marginBottom="16dp"
+                                android:gravity="center"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/grades_disclaimer"
+                                android:textColor="?attr/colorOutline"
+                                android:textSize="11sp" />
 
                         </LinearLayout>
                     </ScrollView>
@@ -1234,6 +1246,18 @@
                                     android:textSize="13sp" />
 
                             </LinearLayout>
+                            
+                            <!-- Discreet Footer Disclaimer -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="24dp"
+                                android:layout_marginBottom="16dp"
+                                android:gravity="center"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/absences_disclaimer"
+                                android:textColor="?attr/colorOutline"
+                                android:textSize="11sp" />
 
                         </LinearLayout>
                     </ScrollView>

@@ -4,6 +4,8 @@
     <string name="login_subtitle">L\'emploi du temps fluide, rapide et sans fioritures</string>
     <string name="btn_login_text">Connexion via le portail étudiant</string>
     <string name="legal_disclaimer">Application indépendante et open-source. Non affiliée à l\'Efrei.</string>
+    <string name="grades_disclaimer">Notes et moyennes affichées à titre purement indicatif.\nSeul le relevé de notes officiel délivré par le jury fait foi.</string>
+    <string name="absences_disclaimer">Données issues du portail étudiant à titre informatif.\nEn cas d\'anomalie, contactez votre service scolarité.</string>
     <string name="today">Aujourd\'hui</string>
     <string name="no_courses">Aucun cours prévu</string>
     <string name="loading_courses">Chargement de votre planning…</string>
