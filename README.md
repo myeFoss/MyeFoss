@@ -91,11 +91,11 @@ Altho I heavily used AI, I am still the master here. I control my tool, and my t
   - Quick day switcher and current class highlights.
   - Detailed bottom sheet with course activities, rooms, campuses, and teachers.
 - **Offline First**:
-  - Full local caching for schedules, grades, and absences.
-  - Zero redundant network requests; only fetches updates when necessary or upon pull-to-refresh.
+  - Full local caching for schedules, grades, periods, and absences.
+  - Zero redundant network requests; instant rendering with background updates upon pull-to-refresh.
 - **Scolarity Hub**:
-  - **Grades & Results**: Academic year filter, unit breakdown (UE), and general average calculator.
-  - **Absence Tracking**: Comprehensive attendance history, hours summary, and justification statuses.
+  - **Grades & Results**: Multi-year academic selector, unit breakdown (UE), and general average calculator with legal advisory disclaimers.
+  - **Absence Tracking**: Comprehensive attendance history by academic year, hours summary, and justification statuses.
 - **Background Course Change Alerts**:
   - Battery-friendly periodic background sync using Android WorkManager.
   - Instant notifications for room changes, rescheduled classes, or cancellations.
@@ -103,7 +103,8 @@ Altho I heavily used AI, I am still the master here. I control my tool, and my t
   - Android 12+ dynamic theming (Monet / system palette).
   - Built-in curated palettes (Emerald, Purple, Amber) and Day/Night mode toggles.
 - **Over-The-Air (OTA) Updates**:
-  - Integrated GitHub Releases checker and in-app installer.
+  - Integrated GitHub Releases checker and in-app APK installer to Downloads.
+  - Dynamic Markdown changelog rendering with commits since installed version.
 - **Session Privacy**:
   - Direct web-based single sign-on (SSO).
   - Explicit logout with complete local cookie and cache purging.
