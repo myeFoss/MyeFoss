@@ -188,6 +188,53 @@ object OfflineCacheManager {
         }
     }
 
+    private const val PERIODS_CACHE_FILE = "myefoss_periods_cache.json"
+
+    fun saveStudentPeriods(context: Context, periods: List<StudentPeriod>) {
+        try {
+            val file = File(context.filesDir, PERIODS_CACHE_FILE)
+            val jsonArray = JSONArray()
+            periods.forEach { p ->
+                val obj = JSONObject().apply {
+                    put("schoolYear", p.schoolYear)
+                    put("period", p.period)
+                    put("programId", p.programId)
+                    p.parity?.let { put("parity", it) }
+                    put("isCurrentYear", p.isCurrentYear)
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadStudentPeriods(context: Context): List<StudentPeriod> {
+        return try {
+            val file = File(context.filesDir, PERIODS_CACHE_FILE)
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<StudentPeriod>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    StudentPeriod(
+                        schoolYear = obj.optString("schoolYear", ""),
+                        period = obj.optString("period", ""),
+                        programId = obj.optString("programId", ""),
+                        parity = if (obj.has("parity")) obj.optString("parity") else null,
+                        isCurrentYear = obj.optBoolean("isCurrentYear", false)
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun clearAllCache(context: Context) {
         try {
             val filesDir = context.filesDir ?: return
@@ -221,3 +268,12 @@ data class StudentAbsence(
     val type: String? = null,
     val reason: String? = null
 )
+
+data class StudentPeriod(
+    val schoolYear: String,
+    val period: String,
+    val programId: String,
+    val parity: String? = null,
+    val isCurrentYear: Boolean = false
+)
+

@@ -167,6 +167,7 @@ class MainActivity : AppCompatActivity() {
         if (allCachedCourses.isNotEmpty()) {
             displayPlanning(allCachedCourses)
         }
+        cachedStudentPeriods = OfflineCacheManager.loadStudentPeriods(this)
 
         // Restore active screen after theme recreation
         val lastScreen = prefs.getString("last_active_screen", "planning")
@@ -597,6 +598,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutGradesEmptyState: LinearLayout
 
     private var currentSelectedYear: String = ""
+    private var lastSchoolYearsList: List<String> = emptyList()
 
     private fun setupSchoolYearSpinner(availableYears: List<String> = emptyList()) {
         val currentYear = getCurrentAcademicYear()
@@ -621,29 +623,39 @@ class MainActivity : AppCompatActivity() {
             currentSelectedYear = yearsList.firstOrNull() ?: currentYear
         }
 
-        val spinnerAdapter = android.widget.ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            yearsList
-        )
-        spinnerSchoolYear.adapter = spinnerAdapter
-        val initialIdx = yearsList.indexOf(currentSelectedYear).takeIf { it >= 0 } ?: 0
-        spinnerSchoolYear.setSelection(initialIdx, false)
+        // Only recreate adapter if the year items list actually changed or spinner has no adapter
+        if (spinnerSchoolYear.adapter == null || lastSchoolYearsList != yearsList) {
+            lastSchoolYearsList = yearsList
+            val spinnerAdapter = android.widget.ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                yearsList
+            )
+            spinnerSchoolYear.adapter = spinnerAdapter
+            val targetIdx = yearsList.indexOf(currentSelectedYear).takeIf { it >= 0 } ?: 0
+            spinnerSchoolYear.setSelection(targetIdx, false)
 
-        spinnerSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val selected = yearsList[position]
-                if (selected != currentSelectedYear) {
-                    currentSelectedYear = selected
-                    loadStudentGrades(selected)
+            spinnerSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    val selected = yearsList[position]
+                    if (selected != currentSelectedYear) {
+                        currentSelectedYear = selected
+                        loadStudentGrades(selected)
+                    }
                 }
-            }
 
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+        } else {
+            val targetIdx = yearsList.indexOf(currentSelectedYear).takeIf { it >= 0 } ?: 0
+            if (spinnerSchoolYear.selectedItemPosition != targetIdx) {
+                spinnerSchoolYear.setSelection(targetIdx, false)
+            }
         }
     }
 
     private fun loadStudentGrades(schoolYear: String = getCurrentAcademicYear(), isSwipe: Boolean = false) {
+        currentSelectedYear = schoolYear
         setupSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
         if (!isSwipe) layoutGradesList.removeAllViews()
 
@@ -672,9 +684,11 @@ class MainActivity : AppCompatActivity() {
                     setupSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
                 }
 
-                if (freshGrades.isNotEmpty() || cachedGrades.isEmpty()) {
+                if (freshGrades.isNotEmpty()) {
                     OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
                     displayGradesGroupedByUe(freshGrades, schoolYear)
+                } else if (cachedGrades.isEmpty()) {
+                    displayGradesGroupedByUe(emptyList(), schoolYear)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossGrades", "Error fetching grades: ${e.message}", e)
@@ -780,14 +794,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    data class StudentPeriod(
-        val schoolYear: String,
-        val period: String,
-        val programId: String,
-        val parity: String? = null,
-        val isCurrentYear: Boolean = false
-    )
-
     private var cachedStudentPeriods: List<StudentPeriod> = emptyList()
 
     private fun fetchStudentPeriodsFromServer(mergedCookies: String): List<StudentPeriod> {
@@ -829,6 +835,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (foundList.isNotEmpty()) {
                     cachedStudentPeriods = foundList
+                    OfflineCacheManager.saveStudentPeriods(this@MainActivity, foundList)
                 }
                 return foundList
             } else {
@@ -836,6 +843,9 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             android.util.Log.e("MyeFossGrades", "Periods fetch error: ${e.message}")
+        }
+        if (cachedStudentPeriods.isEmpty()) {
+            cachedStudentPeriods = OfflineCacheManager.loadStudentPeriods(this@MainActivity)
         }
         return cachedStudentPeriods
     }
@@ -864,21 +874,38 @@ class MainActivity : AppCompatActivity() {
         val periodsFromServer = fetchStudentPeriodsFromServer(mergedCookies)
         android.util.Log.d("MyeFossGrades", "Valid periods from server: $periodsFromServer")
 
+        fun normalizeYear(y: String) = y.trim().replace("/", "-")
+        val reqNormYear = normalizeYear(schoolYear)
+
         val endpointsToTry = mutableListOf<String>()
 
-        // Find periods matching the requested schoolYear
-        val matchingPeriods = periodsFromServer.filter { it.schoolYear.equals(schoolYear, ignoreCase = true) }
+        // 1. Find periods matching the requested schoolYear (exact or normalized)
+        val matchingPeriods = periodsFromServer.filter {
+            it.schoolYear.equals(schoolYear, ignoreCase = true) ||
+            normalizeYear(it.schoolYear) == reqNormYear ||
+            (reqNormYear.contains("-") && it.schoolYear.contains(reqNormYear.split("-")[0]))
+        }
+
         for (mp in matchingPeriods) {
             val encPeriod = URLEncoder.encode(mp.period, "UTF-8")
             val encProgram = URLEncoder.encode(mp.programId, "UTF-8")
+            val encServerYear = URLEncoder.encode(mp.schoolYear, "UTF-8")
             if (mp.period.isNotBlank() && mp.programId.isNotBlank()) {
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?period=$encPeriod&programId=$encProgram")
+                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encServerYear&period=$encPeriod&programId=$encProgram")
+            }
+            if (mp.period.isNotBlank()) {
+                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?period=$encPeriod")
             }
         }
 
-        // Fallback: direct schoolYear parameter
-        val encYear = URLEncoder.encode(schoolYear, "UTF-8")
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encYear")
+        // 2. Direct schoolYear parameter (both original and slash/dash variants)
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=${URLEncoder.encode(schoolYear, "UTF-8")}")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=${URLEncoder.encode(schoolYear.replace("-", "/"), "UTF-8")}")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=${URLEncoder.encode(schoolYear.replace("/", "-"), "UTF-8")}")
+
+        // 3. Fallback: bare endpoint without query params
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades")
 
         for (urlStr in endpointsToTry) {
             try {
@@ -982,6 +1009,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var currentSelectedAbsencesYear: String = ""
+    private var lastAbsencesYearsList: List<String> = emptyList()
 
     private fun setupAbsencesSchoolYearSpinner(availableYears: List<String> = emptyList()) {
         val currentYear = getCurrentAcademicYear()
@@ -1006,29 +1034,39 @@ class MainActivity : AppCompatActivity() {
             currentSelectedAbsencesYear = yearsList.firstOrNull() ?: currentYear
         }
 
-        val spinnerAdapter = android.widget.ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            yearsList
-        )
-        spinnerAbsencesSchoolYear.adapter = spinnerAdapter
-        val initialIdx = yearsList.indexOf(currentSelectedAbsencesYear).takeIf { it >= 0 } ?: 0
-        spinnerAbsencesSchoolYear.setSelection(initialIdx, false)
+        // Only recreate adapter if the year items list actually changed or spinner has no adapter
+        if (spinnerAbsencesSchoolYear.adapter == null || lastAbsencesYearsList != yearsList) {
+            lastAbsencesYearsList = yearsList
+            val spinnerAdapter = android.widget.ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                yearsList
+            )
+            spinnerAbsencesSchoolYear.adapter = spinnerAdapter
+            val targetIdx = yearsList.indexOf(currentSelectedAbsencesYear).takeIf { it >= 0 } ?: 0
+            spinnerAbsencesSchoolYear.setSelection(targetIdx, false)
 
-        spinnerAbsencesSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val selected = yearsList[position]
-                if (selected != currentSelectedAbsencesYear) {
-                    currentSelectedAbsencesYear = selected
-                    loadStudentAbsences(selected)
+            spinnerAbsencesSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    val selected = yearsList[position]
+                    if (selected != currentSelectedAbsencesYear) {
+                        currentSelectedAbsencesYear = selected
+                        loadStudentAbsences(selected)
+                    }
                 }
-            }
 
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+        } else {
+            val targetIdx = yearsList.indexOf(currentSelectedAbsencesYear).takeIf { it >= 0 } ?: 0
+            if (spinnerAbsencesSchoolYear.selectedItemPosition != targetIdx) {
+                spinnerAbsencesSchoolYear.setSelection(targetIdx, false)
+            }
         }
     }
 
     private fun loadStudentAbsences(schoolYear: String = getCurrentAcademicYear(), isSwipe: Boolean = false) {
+        currentSelectedAbsencesYear = schoolYear
         setupAbsencesSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
         if (!isSwipe) layoutAbsencesList.removeAllViews()
 
@@ -1057,9 +1095,11 @@ class MainActivity : AppCompatActivity() {
                     setupAbsencesSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
                 }
 
-                if (fresh.isNotEmpty() || cached.isEmpty()) {
+                if (fresh.isNotEmpty()) {
                     OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
                     displayAbsences(fresh, schoolYear)
+                } else if (cached.isEmpty()) {
+                    displayAbsences(emptyList(), schoolYear)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossAbsences", "Error fetching absences: ${e.message}", e)
@@ -1144,21 +1184,39 @@ class MainActivity : AppCompatActivity() {
         val mergedCookies = cookieMap.values.joinToString("; ")
 
         val periodsFromServer = fetchStudentPeriodsFromServer(mergedCookies)
+
+        fun normalizeYear(y: String) = y.trim().replace("/", "-")
+        val reqNormYear = normalizeYear(schoolYear)
+
         val endpointsToTry = mutableListOf<String>()
 
-        // Find periods matching the requested schoolYear
-        val matchingPeriods = periodsFromServer.filter { it.schoolYear.equals(schoolYear, ignoreCase = true) }
+        // 1. Find periods matching the requested schoolYear (exact or normalized)
+        val matchingPeriods = periodsFromServer.filter {
+            it.schoolYear.equals(schoolYear, ignoreCase = true) ||
+            normalizeYear(it.schoolYear) == reqNormYear ||
+            (reqNormYear.contains("-") && it.schoolYear.contains(reqNormYear.split("-")[0]))
+        }
+
         for (mp in matchingPeriods) {
             val encPeriod = URLEncoder.encode(mp.period, "UTF-8")
             val encProgram = URLEncoder.encode(mp.programId, "UTF-8")
+            val encServerYear = URLEncoder.encode(mp.schoolYear, "UTF-8")
             if (mp.period.isNotBlank() && mp.programId.isNotBlank()) {
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod&programId=$encProgram")
+                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encServerYear&period=$encPeriod&programId=$encProgram")
+            }
+            if (mp.period.isNotBlank()) {
+                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod")
             }
         }
 
-        // Fallback: direct schoolYear parameter
-        val encYear = URLEncoder.encode(schoolYear, "UTF-8")
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encYear")
+        // 2. Direct schoolYear parameter (both original and slash/dash variants)
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=${URLEncoder.encode(schoolYear, "UTF-8")}")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=${URLEncoder.encode(schoolYear.replace("-", "/"), "UTF-8")}")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=${URLEncoder.encode(schoolYear.replace("/", "-"), "UTF-8")}")
+
+        // 3. Fallback: bare endpoint without query params
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences")
 
         for (urlStr in endpointsToTry) {
             try {
