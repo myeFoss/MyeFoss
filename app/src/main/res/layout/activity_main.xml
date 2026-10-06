@@ -501,11 +501,11 @@
                             android:letterSpacing="0.05"
                             android:layout_marginBottom="12dp" />
 
-                        <!-- Theme Selection Card -->
+                        <!-- 1. Mode Clair / Sombre -->
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="24dp"
+                            android:layout_marginBottom="20dp"
                             app:cardCornerRadius="20dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="1dp"
@@ -523,7 +523,7 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:padding="12dp"
-                                    android:text="Système (Monet dynamique)"
+                                    android:text="Système (Automatique)"
                                     android:textColor="?attr/colorOnSurface"
                                     android:textSize="15sp"
                                     android:fontFamily="sans-serif-medium" />
@@ -562,6 +562,48 @@
                                     android:textSize="15sp"
                                     android:fontFamily="sans-serif-medium" />
 
+                            </RadioGroup>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Palette de couleurs"
+                            android:textColor="?attr/colorPrimary"
+                            android:textSize="14sp"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.05"
+                            android:layout_marginBottom="12dp" />
+
+                        <!-- 2. Palettes de Couleurs Card -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="24dp"
+                            app:cardCornerRadius="20dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant"
+                            app:cardBackgroundColor="?attr/colorSurface">
+
+                            <RadioGroup
+                                android:id="@+id/rgPalette"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:padding="12dp">
+
+                                <RadioButton
+                                    android:id="@+id/rbPaletteDefault"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:padding="12dp"
+                                    android:text="Bleu Océan (Classique)"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="15sp"
+                                    android:fontFamily="sans-serif-medium" />
+
                                 <View
                                     android:layout_width="match_parent"
                                     android:layout_height="1dp"
@@ -570,11 +612,45 @@
                                     android:background="?attr/colorOutlineVariant" />
 
                                 <RadioButton
-                                    android:id="@+id/rbThemeAmoled"
+                                    android:id="@+id/rbPaletteEmerald"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:padding="12dp"
-                                    android:text="Noir profond (Écran OLED)"
+                                    android:text="Vert Émeraude (Nature)"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="15sp"
+                                    android:fontFamily="sans-serif-medium" />
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="1dp"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="?attr/colorOutlineVariant" />
+
+                                <RadioButton
+                                    android:id="@+id/rbPalettePurple"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:padding="12dp"
+                                    android:text="Violet Améthyste"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="15sp"
+                                    android:fontFamily="sans-serif-medium" />
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="1dp"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="?attr/colorOutlineVariant" />
+
+                                <RadioButton
+                                    android:id="@+id/rbPaletteAmber"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:padding="12dp"
+                                    android:text="Ambre Couché de soleil"
                                     android:textColor="?attr/colorOnSurface"
                                     android:textSize="15sp"
                                     android:fontFamily="sans-serif-medium" />

@@ -72,7 +72,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbThemeSystem: android.widget.RadioButton
     private lateinit var rbThemeLight: android.widget.RadioButton
     private lateinit var rbThemeDark: android.widget.RadioButton
-    private lateinit var rbThemeAmoled: android.widget.RadioButton
+
+    private lateinit var rgPalette: android.widget.RadioGroup
+    private lateinit var rbPaletteDefault: android.widget.RadioButton
+    private lateinit var rbPaletteEmerald: android.widget.RadioButton
+    private lateinit var rbPalettePurple: android.widget.RadioButton
+    private lateinit var rbPaletteAmber: android.widget.RadioButton
 
     // Planning header & calendar views
     private lateinit var btnHeaderTitleWrapper: LinearLayout
@@ -108,9 +113,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
         val savedThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        val savedPalette = prefs.getString("theme_palette", "default") ?: "default"
+
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(savedThemeMode)
 
-        DynamicColors.applyToActivityIfAvailable(this)
+        // Apply selected palette theme
+        when (savedPalette) {
+            "emerald" -> setTheme(R.style.Theme_EfreiAgenda_Emerald)
+            "purple" -> setTheme(R.style.Theme_EfreiAgenda_Purple)
+            "amber" -> setTheme(R.style.Theme_EfreiAgenda_Amber)
+            else -> setTheme(R.style.Theme_EfreiAgenda)
+        }
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -123,6 +136,15 @@ class MainActivity : AppCompatActivity() {
         allCachedCourses = OfflineCacheManager.loadCourses(this)
         if (allCachedCourses.isNotEmpty()) {
             displayPlanning(allCachedCourses)
+        }
+
+        // Restore active screen after theme recreation
+        val lastScreen = prefs.getString("last_active_screen", "planning")
+        when (lastScreen) {
+            "settings" -> openSettingsScreen()
+            "scolarity" -> showScolarityTab()
+            "grades" -> openGradesScreen()
+            else -> showPlanningTab()
         }
 
         checkSessionAndLoad()
@@ -154,7 +176,12 @@ class MainActivity : AppCompatActivity() {
         rbThemeSystem = findViewById(R.id.rbThemeSystem)
         rbThemeLight = findViewById(R.id.rbThemeLight)
         rbThemeDark = findViewById(R.id.rbThemeDark)
-        rbThemeAmoled = findViewById(R.id.rbThemeAmoled)
+
+        rgPalette = findViewById(R.id.rgPalette)
+        rbPaletteDefault = findViewById(R.id.rbPaletteDefault)
+        rbPaletteEmerald = findViewById(R.id.rbPaletteEmerald)
+        rbPalettePurple = findViewById(R.id.rbPalettePurple)
+        rbPaletteAmber = findViewById(R.id.rbPaletteAmber)
 
         btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
@@ -288,6 +315,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPlanningTab() {
+        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "planning").apply()
         tabContainerPlanning.visibility = View.VISIBLE
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
@@ -297,6 +325,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showScolarityTab() {
+        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "scolarity").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.VISIBLE
         tabContainerSettings.visibility = View.GONE
@@ -306,6 +335,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSettingsScreen() {
+        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "settings").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
@@ -315,6 +345,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openGradesScreen() {
+        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "grades").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
@@ -328,40 +359,56 @@ class MainActivity : AppCompatActivity() {
     private fun setupThemeSettings() {
         val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
         val currentThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        val isAmoled = prefs.getBoolean("theme_amoled", false)
+        val currentPalette = prefs.getString("theme_palette", "default") ?: "default"
 
-        when {
-            isAmoled -> rbThemeAmoled.isChecked = true
-            currentThemeMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> rbThemeLight.isChecked = true
-            currentThemeMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> rbThemeDark.isChecked = true
+        // 1. Initial State for Theme Mode
+        when (currentThemeMode) {
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> rbThemeLight.isChecked = true
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> rbThemeDark.isChecked = true
             else -> rbThemeSystem.isChecked = true
         }
 
-        rgThemeMode.setOnCheckedChangeListener { _, checkedId ->
-            var targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            var enableAmoled = false
+        // 2. Initial State for Color Palette
+        when (currentPalette) {
+            "emerald" -> rbPaletteEmerald.isChecked = true
+            "purple" -> rbPalettePurple.isChecked = true
+            "amber" -> rbPaletteAmber.isChecked = true
+            else -> rbPaletteDefault.isChecked = true
+        }
 
-            when (checkedId) {
-                R.id.rbThemeLight -> {
-                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                }
-                R.id.rbThemeDark -> {
-                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                }
-                R.id.rbThemeAmoled -> {
-                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                    enableAmoled = true
-                }
-                else -> {
-                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
+        // Theme Mode Change Listener
+        rgThemeMode.setOnCheckedChangeListener { _, checkedId ->
+            val targetMode = when (checkedId) {
+                R.id.rbThemeLight -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                R.id.rbThemeDark -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
             }
 
             prefs.edit()
                 .putInt("theme_mode", targetMode)
-                .putBoolean("theme_amoled", enableAmoled)
+                .putString("last_active_screen", "settings")
                 .apply()
+
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
+        }
+
+        // Palette Change Listener
+        rgPalette.setOnCheckedChangeListener { _, checkedId ->
+            val targetPalette = when (checkedId) {
+                R.id.rbPaletteEmerald -> "emerald"
+                R.id.rbPalettePurple -> "purple"
+                R.id.rbPaletteAmber -> "amber"
+                else -> "default"
+            }
+
+            if (targetPalette != currentPalette) {
+                prefs.edit()
+                    .putString("theme_palette", targetPalette)
+                    .putString("last_active_screen", "settings")
+                    .apply()
+
+                recreate()
+            }
         }
     }
 

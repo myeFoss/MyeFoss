@@ -1,5 +1,5 @@
 <resources>
-    <!-- Dark Material 3 Colors -->
+    <!-- Dark Material 3 Colors (Default Ocean Blue) -->
     <color name="md_theme_dark_primary">#9ECAFF</color>
     <color name="md_theme_dark_onPrimary">#003258</color>
     <color name="md_theme_dark_primaryContainer">#00497D</color>
@@ -24,6 +24,39 @@
     <color name="md_theme_dark_onSurfaceVariant">#C3C7CF</color>
     <color name="md_theme_dark_outline">#8D9199</color>
     <color name="md_theme_dark_outlineVariant">#43474E</color>
+
+    <!-- Palette 2: Forest Emerald Dark -->
+    <color name="emerald_dark_primary">#89D8A5</color>
+    <color name="emerald_dark_onPrimary">#00391F</color>
+    <color name="emerald_dark_primaryContainer">#00522E</color>
+    <color name="emerald_dark_onPrimaryContainer">#A5F5BF</color>
+    <color name="emerald_dark_secondary">#B6CCB9</color>
+    <color name="emerald_dark_onSecondary">#213527</color>
+    <color name="emerald_dark_secondaryContainer">#384B3D</color>
+    <color name="emerald_dark_onSecondaryContainer">#D2E8D4</color>
+    <color name="emerald_dark_surfaceVariant">#414941</color>
+
+    <!-- Palette 3: Royal Purple Dark -->
+    <color name="purple_dark_primary">#D0BCFF</color>
+    <color name="purple_dark_onPrimary">#381E72</color>
+    <color name="purple_dark_primaryContainer">#4F378B</color>
+    <color name="purple_dark_onPrimaryContainer">#EADDFF</color>
+    <color name="purple_dark_secondary">#CCC2DC</color>
+    <color name="purple_dark_onSecondary">#332D41</color>
+    <color name="purple_dark_secondaryContainer">#4A4458</color>
+    <color name="purple_dark_onSecondaryContainer">#E8DEF8</color>
+    <color name="purple_dark_surfaceVariant">#49454F</color>
+
+    <!-- Palette 4: Sunset Amber Dark -->
+    <color name="amber_dark_primary">#FFB680</color>
+    <color name="amber_dark_onPrimary">#4D2600</color>
+    <color name="amber_dark_primaryContainer">#6D3A00</color>
+    <color name="amber_dark_onPrimaryContainer">#FFDCC2</color>
+    <color name="amber_dark_secondary">#E2C0A5</color>
+    <color name="amber_dark_onSecondary">#412C19</color>
+    <color name="amber_dark_secondaryContainer">#5A422D</color>
+    <color name="amber_dark_onSecondaryContainer">#FFDCBE</color>
+    <color name="amber_dark_surfaceVariant">#51443B</color>
 
     <!-- Dark badges -->
     <color name="badge_exam_bg">#570007</color>

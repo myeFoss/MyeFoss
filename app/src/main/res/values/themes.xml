@@ -1,5 +1,5 @@
 <resources>
-    <!-- Base Material 3 Theme with Dynamic Color support -->
+    <!-- Base Material 3 Theme (Ocean Blue) -->
     <style name="Theme.EfreiAgenda" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
@@ -25,5 +25,44 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <!-- Emerald Palette Theme -->
+    <style name="Theme.EfreiAgenda.Emerald" parent="Theme.EfreiAgenda">
+        <item name="colorPrimary">@color/emerald_light_primary</item>
+        <item name="colorOnPrimary">@color/emerald_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/emerald_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/emerald_light_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/emerald_light_secondary</item>
+        <item name="colorOnSecondary">@color/emerald_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/emerald_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/emerald_light_onSecondaryContainer</item>
+        <item name="colorSurfaceVariant">@color/emerald_light_surfaceVariant</item>
+    </style>
+
+    <!-- Purple Palette Theme -->
+    <style name="Theme.EfreiAgenda.Purple" parent="Theme.EfreiAgenda">
+        <item name="colorPrimary">@color/purple_light_primary</item>
+        <item name="colorOnPrimary">@color/purple_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/purple_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/purple_light_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/purple_light_secondary</item>
+        <item name="colorOnSecondary">@color/purple_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/purple_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/purple_light_onSecondaryContainer</item>
+        <item name="colorSurfaceVariant">@color/purple_light_surfaceVariant</item>
+    </style>
+
+    <!-- Amber Palette Theme -->
+    <style name="Theme.EfreiAgenda.Amber" parent="Theme.EfreiAgenda">
+        <item name="colorPrimary">@color/amber_light_primary</item>
+        <item name="colorOnPrimary">@color/amber_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/amber_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/amber_light_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/amber_light_secondary</item>
+        <item name="colorOnSecondary">@color/amber_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/amber_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/amber_light_onSecondaryContainer</item>
+        <item name="colorSurfaceVariant">@color/amber_light_surfaceVariant</item>
     </style>
 </resources>

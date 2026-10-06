@@ -1,5 +1,5 @@
 <resources>
-    <!-- Light Material 3 Colors -->
+    <!-- Light Material 3 Colors (Default Ocean Blue) -->
     <color name="md_theme_light_primary">#0062A3</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
     <color name="md_theme_light_primaryContainer">#D0E4FF</color>
@@ -24,6 +24,39 @@
     <color name="md_theme_light_onSurfaceVariant">#43474E</color>
     <color name="md_theme_light_outline">#73777F</color>
     <color name="md_theme_light_outlineVariant">#C3C7CF</color>
+
+    <!-- Palette 2: Forest Emerald (Vert Forêt) -->
+    <color name="emerald_light_primary">#1B6D43</color>
+    <color name="emerald_light_onPrimary">#FFFFFF</color>
+    <color name="emerald_light_primaryContainer">#A5F5BF</color>
+    <color name="emerald_light_onPrimaryContainer">#00210E</color>
+    <color name="emerald_light_secondary">#4F6353</color>
+    <color name="emerald_light_onSecondary">#FFFFFF</color>
+    <color name="emerald_light_secondaryContainer">#D2E8D4</color>
+    <color name="emerald_light_onSecondaryContainer">#0D1F13</color>
+    <color name="emerald_light_surfaceVariant">#DBE5DC</color>
+
+    <!-- Palette 3: Royal Purple (Violet Améthyste) -->
+    <color name="purple_light_primary">#6750A4</color>
+    <color name="purple_light_onPrimary">#FFFFFF</color>
+    <color name="purple_light_primaryContainer">#EADDFF</color>
+    <color name="purple_light_onPrimaryContainer">#21005D</color>
+    <color name="purple_light_secondary">#625B71</color>
+    <color name="purple_light_onSecondary">#FFFFFF</color>
+    <color name="purple_light_secondaryContainer">#E8DEF8</color>
+    <color name="purple_light_onSecondaryContainer">#1D192B</color>
+    <color name="purple_light_surfaceVariant">#E7E0EB</color>
+
+    <!-- Palette 4: Sunset Amber (Ambre / Terracotta) -->
+    <color name="amber_light_primary">#8E4F00</color>
+    <color name="amber_light_onPrimary">#FFFFFF</color>
+    <color name="amber_light_primaryContainer">#FFDCC2</color>
+    <color name="amber_light_onPrimaryContainer">#2E1500</color>
+    <color name="amber_light_secondary">#735A42</color>
+    <color name="amber_light_onSecondary">#FFFFFF</color>
+    <color name="amber_light_secondaryContainer">#FFDCBE</color>
+    <color name="amber_light_onSecondaryContainer">#2A1706</color>
+    <color name="amber_light_surfaceVariant">#F2DFD1</color>
 
     <!-- Clean and unified M3 Badges (discreet, harmonious) -->
     <color name="badge_exam_bg">#FCE8E6</color>
