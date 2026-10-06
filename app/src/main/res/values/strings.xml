@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">Efrei Agenda</string>
-    <string name="login_title">Efrei Agenda</string>
-    <string name="login_subtitle">Accédez simplement et rapidement à votre emploi du temps Efrei</string>
+    <string name="app_name">MyeFoss</string>
+    <string name="login_title">MyeFoss</string>
+    <string name="login_subtitle">Votre emploi du temps et scolarité Efrei libres et fluides</string>
     <string name="btn_login_text">Se connecter avec Efrei</string>
     <string name="today">Aujourd\'hui</string>
     <string name="no_courses">Aucun cours prévu</string>

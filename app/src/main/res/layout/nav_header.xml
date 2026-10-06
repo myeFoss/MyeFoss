@@ -10,13 +10,11 @@
     android:paddingTop="48dp"
     android:paddingBottom="24dp">
 
-    <ImageView
-        android:layout_width="52dp"
-        android:layout_height="52dp"
-        android:background="?attr/colorPrimary"
-        android:padding="12dp"
-        android:src="@drawable/ic_calendar"
-        app:tint="?attr/colorOnPrimary" />
+    <com.google.android.material.imageview.ShapeableImageView
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:src="@drawable/ic_myefoss_logo"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
 
     <TextView
         android:layout_width="wrap_content"
