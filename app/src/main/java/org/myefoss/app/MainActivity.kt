@@ -605,7 +605,7 @@ class MainActivity : AppCompatActivity() {
         val yearsList = if (availableYears.isNotEmpty()) {
             val list = availableYears.distinct().toMutableList()
             if (!list.contains(currentYear)) list.add(0, currentYear)
-            list
+            list.sortedDescending()
         } else {
             val cal = Calendar.getInstance()
             val year = cal.get(Calendar.YEAR)
@@ -882,8 +882,7 @@ class MainActivity : AppCompatActivity() {
         // 1. Find periods matching the requested schoolYear (exact or normalized)
         val matchingPeriods = periodsFromServer.filter {
             it.schoolYear.equals(schoolYear, ignoreCase = true) ||
-            normalizeYear(it.schoolYear) == reqNormYear ||
-            (reqNormYear.contains("-") && it.schoolYear.contains(reqNormYear.split("-")[0]))
+            normalizeYear(it.schoolYear) == reqNormYear
         }
 
         for (mp in matchingPeriods) {
@@ -904,8 +903,10 @@ class MainActivity : AppCompatActivity() {
         endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=${URLEncoder.encode(schoolYear.replace("-", "/"), "UTF-8")}")
         endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=${URLEncoder.encode(schoolYear.replace("/", "-"), "UTF-8")}")
 
-        // 3. Fallback: bare endpoint without query params
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades")
+        // 3. Fallback: bare endpoint without query params ONLY for current academic year
+        if (reqNormYear == normalizeYear(getCurrentAcademicYear())) {
+            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades")
+        }
 
         for (urlStr in endpointsToTry) {
             try {
@@ -1016,7 +1017,7 @@ class MainActivity : AppCompatActivity() {
         val yearsList = if (availableYears.isNotEmpty()) {
             val list = availableYears.distinct().toMutableList()
             if (!list.contains(currentYear)) list.add(0, currentYear)
-            list
+            list.sortedDescending()
         } else {
             val cal = Calendar.getInstance()
             val year = cal.get(Calendar.YEAR)
@@ -1193,8 +1194,7 @@ class MainActivity : AppCompatActivity() {
         // 1. Find periods matching the requested schoolYear (exact or normalized)
         val matchingPeriods = periodsFromServer.filter {
             it.schoolYear.equals(schoolYear, ignoreCase = true) ||
-            normalizeYear(it.schoolYear) == reqNormYear ||
-            (reqNormYear.contains("-") && it.schoolYear.contains(reqNormYear.split("-")[0]))
+            normalizeYear(it.schoolYear) == reqNormYear
         }
 
         for (mp in matchingPeriods) {
@@ -1215,8 +1215,10 @@ class MainActivity : AppCompatActivity() {
         endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=${URLEncoder.encode(schoolYear.replace("-", "/"), "UTF-8")}")
         endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=${URLEncoder.encode(schoolYear.replace("/", "-"), "UTF-8")}")
 
-        // 3. Fallback: bare endpoint without query params
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences")
+        // 3. Fallback: bare endpoint without query params ONLY for current academic year
+        if (reqNormYear == normalizeYear(getCurrentAcademicYear())) {
+            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences")
+        }
 
         for (urlStr in endpointsToTry) {
             try {
@@ -1225,9 +1227,13 @@ class MainActivity : AppCompatActivity() {
                     connectTimeout = 15000
                     readTimeout = 15000
                     setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
                     setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
                     setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/absences")
                     setRequestProperty("Origin", "https://www.myefrei.fr")
+                    setRequestProperty("Sec-Fetch-Dest", "empty")
+                    setRequestProperty("Sec-Fetch-Mode", "cors")
+                    setRequestProperty("Sec-Fetch-Site", "same-origin")
                     if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
                 }
 
@@ -1236,7 +1242,9 @@ class MainActivity : AppCompatActivity() {
                     val response = conn.inputStream.bufferedReader().use { it.readText() }
                     android.util.Log.d("MyeFossAbsences", "Endpoint $urlStr SUCCESS HTTP $code. Length: ${response.length}")
                     val list = parseAnyAbsencesResponse(response)
-                    return list
+                    if (list.isNotEmpty()) {
+                        return list
+                    }
                 } else {
                     val errBody = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                     android.util.Log.w("MyeFossAbsences", "Endpoint $urlStr failed with HTTP $code: $errBody")
@@ -1270,20 +1278,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun extractAbsencesRecursive(obj: JSONObject, outList: MutableList<StudentAbsence>) {
-        val courseName = obj.optString("courseName", obj.optString("subject", obj.optString("module", obj.optString("name", ""))))
-        val hasDate = obj.has("date") || obj.has("startDate") || obj.has("start")
-        val hasDuration = obj.has("duration") || obj.has("hours") || obj.has("nbHours")
+        val courseName = obj.optString("courseName", obj.optString("subject", obj.optString("module", obj.optString("course", obj.optString("name", obj.optString("title", ""))))))
+        val hasDate = obj.has("date") || obj.has("startDate") || obj.has("start") || obj.has("sessionDate") || obj.has("dateSession") || obj.has("createdAt")
+        val hasDuration = obj.has("duration") || obj.has("hours") || obj.has("nbHours") || obj.has("totalHours")
+        val hasAbsenceMarkers = obj.has("justified") || obj.has("isJustified") || obj.has("motif") || obj.has("reason") || obj.has("late") || obj.has("retard")
 
-        if (courseName.isNotBlank() && (hasDate || hasDuration)) {
-            val dateStr = obj.optString("date", obj.optString("startDate", ""))
-            val hoursStr = obj.optString("hours", obj.optString("duration", obj.optString("nbHours", "1h30")))
-            val isJustified = obj.optBoolean("justified", obj.optBoolean("isJustified", false))
-            val reason = obj.optString("reason", obj.optString("motif", ""))
-            val type = obj.optString("type", obj.optString("sessionType", ""))
+        if (courseName.isNotBlank() && (hasDate || hasDuration || hasAbsenceMarkers)) {
+            val rawDate = obj.optString("date", obj.optString("startDate", obj.optString("start", obj.optString("sessionDate", obj.optString("dateSession", "")))))
+            val dateStr = if (rawDate.length >= 10 && rawDate.contains("T")) {
+                rawDate.substring(0, 10)
+            } else {
+                rawDate
+            }
+            val hoursStr = obj.optString("hours", obj.optString("duration", obj.optString("nbHours", obj.optString("totalHours", "1h30"))))
+            val isJustified = obj.optBoolean("justified", obj.optBoolean("isJustified", obj.optBoolean("justifie", false)))
+            val reason = obj.optString("reason", obj.optString("motif", obj.optString("comment", "")))
+            val type = obj.optString("type", obj.optString("sessionType", obj.optString("activity", "")))
 
             outList.add(
                 StudentAbsence(
-                    id = obj.optString("id", outList.size.toString()),
+                    id = obj.optString("id", obj.optString("_id", outList.size.toString())),
                     courseName = courseName,
                     date = dateStr,
                     hours = hoursStr,
