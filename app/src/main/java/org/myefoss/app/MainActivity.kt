@@ -836,35 +836,16 @@ class MainActivity : AppCompatActivity() {
         // Find periods matching the requested schoolYear
         val matchingPeriods = periodsFromServer.filter { it.schoolYear.equals(schoolYear, ignoreCase = true) }
         for (mp in matchingPeriods) {
-            val encYear = URLEncoder.encode(mp.schoolYear, "UTF-8")
             val encPeriod = URLEncoder.encode(mp.period, "UTF-8")
             val encProgram = URLEncoder.encode(mp.programId, "UTF-8")
-
             if (mp.period.isNotBlank() && mp.programId.isNotBlank()) {
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?period=$encPeriod&programId=$encProgram")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encYear&period=$encPeriod&programId=$encProgram")
-            }
-            if (mp.period.isNotBlank()) {
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encYear&period=$encPeriod")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?period=$encPeriod")
-            }
-            if (mp.programId.isNotBlank()) {
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encYear&programId=$encProgram")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?programId=$encProgram")
             }
         }
 
-        // Standard schoolYear variants
-        val candidateYears = mutableListOf(schoolYear)
-        if (schoolYear.contains("-")) {
-            candidateYears.add(schoolYear.replace("-", "/"))
-            candidateYears.add(schoolYear.split("-").first())
-        }
-        for (yr in candidateYears) {
-            val enc = URLEncoder.encode(yr, "UTF-8")
-            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$enc")
-        }
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades")
+        // Fallback: direct schoolYear parameter
+        val encYear = URLEncoder.encode(schoolYear, "UTF-8")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encYear")
 
         for (urlStr in endpointsToTry) {
             try {
@@ -1120,37 +1101,19 @@ class MainActivity : AppCompatActivity() {
         val periodsFromServer = fetchStudentPeriodsFromServer(mergedCookies)
         val endpointsToTry = mutableListOf<String>()
 
+        // Find periods matching the requested schoolYear
         val matchingPeriods = periodsFromServer.filter { it.schoolYear.equals(schoolYear, ignoreCase = true) }
         for (mp in matchingPeriods) {
-            val encYear = URLEncoder.encode(mp.schoolYear, "UTF-8")
             val encPeriod = URLEncoder.encode(mp.period, "UTF-8")
             val encProgram = URLEncoder.encode(mp.programId, "UTF-8")
-
             if (mp.period.isNotBlank() && mp.programId.isNotBlank()) {
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod&programId=$encProgram")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encYear&period=$encPeriod&programId=$encProgram")
-            }
-            if (mp.period.isNotBlank()) {
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encYear&period=$encPeriod")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod")
-            }
-            if (mp.programId.isNotBlank()) {
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encYear&programId=$encProgram")
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?programId=$encProgram")
             }
         }
 
-        val candidateYears = mutableListOf(schoolYear)
-        if (schoolYear.contains("-")) {
-            candidateYears.add(schoolYear.replace("-", "/"))
-            candidateYears.add(schoolYear.split("-").first())
-        }
-
-        candidateYears.forEach { yr ->
-            val enc = URLEncoder.encode(yr, "UTF-8")
-            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$enc")
-        }
-        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences")
+        // Fallback: direct schoolYear parameter
+        val encYear = URLEncoder.encode(schoolYear, "UTF-8")
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encYear")
 
         for (urlStr in endpointsToTry) {
             try {
@@ -1271,9 +1234,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkSessionAndLoad() {
+        val prefs = getSharedPreferences("myefoss_prefs", MODE_PRIVATE)
+        val isExplicitlyLoggedOut = prefs.getBoolean("is_logged_out", false)
         val cookieManager = CookieManager.getInstance()
         val cookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
-        if (cookies.contains("myefrei.sid") || allCachedCourses.isNotEmpty()) {
+        if (!isExplicitlyLoggedOut && (cookies.contains("myefrei.sid") || allCachedCourses.isNotEmpty())) {
             showScreen(Screen.APP)
             loadAgendaForCurrentWeek()
         } else {
@@ -1307,6 +1272,7 @@ class MainActivity : AppCompatActivity() {
                     val cm = CookieManager.getInstance()
                     val c = cm.getCookie("https://www.myefrei.fr") ?: ""
                     if (c.contains("myefrei.sid")) {
+                        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putBoolean("is_logged_out", false).apply()
                         loginWebView.visibility = View.GONE
                         showScreen(Screen.APP)
                         loadAgendaForCurrentWeek()
@@ -1756,8 +1722,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putBoolean("is_logged_out", true).apply()
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
+        loginWebView.clearHistory()
+        loginWebView.clearCache(true)
+        loginWebView.clearFormData()
+        OfflineCacheManager.clearAllCache(this)
+        allCachedCourses = emptyList()
         adapter.submitList(emptyList())
         showScreen(Screen.LOGIN)
     }
