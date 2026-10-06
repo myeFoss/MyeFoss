@@ -63,10 +63,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerScolarity: ScrollView
     private lateinit var tabContainerSettings: ScrollView
     private lateinit var tabContainerGrades: LinearLayout
+    private lateinit var tabContainerAbsences: LinearLayout
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
     private lateinit var layoutGradesList: LinearLayout
+
+    // Absences views
+    private lateinit var btnBackFromAbsences: MaterialButton
+    private lateinit var layoutAbsencesList: LinearLayout
+    private lateinit var layoutAbsencesEmptyState: LinearLayout
+    private lateinit var tvAbsencesTotalHours: TextView
+    private lateinit var tvAbsencesSummaryLabel: TextView
+    private lateinit var spinnerAbsencesSchoolYear: android.widget.Spinner
+    private var isAbsencesYearSpinnerInitialized: Boolean = false
 
     // Settings views
     private lateinit var rgThemeMode: android.widget.RadioGroup
@@ -79,6 +89,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbPaletteEmerald: android.widget.RadioButton
     private lateinit var rbPalettePurple: android.widget.RadioButton
     private lateinit var rbPaletteAmber: android.widget.RadioButton
+    private lateinit var rbPaletteMonet: android.widget.RadioButton
+    private lateinit var dividerMonet: View
     private lateinit var switchCourseNotifications: com.google.android.material.materialswitch.MaterialSwitch
 
     // Planning header & calendar views
@@ -124,6 +136,13 @@ class MainActivity : AppCompatActivity() {
 
         // Apply selected palette theme
         when (savedPalette) {
+            "monet" -> {
+                if (DynamicColors.isDynamicColorAvailable()) {
+                    DynamicColors.applyIfAvailable(this)
+                } else {
+                    setTheme(R.style.Theme_MyeFoss)
+                }
+            }
             "emerald" -> setTheme(R.style.Theme_MyeFoss_Emerald)
             "purple" -> setTheme(R.style.Theme_MyeFoss_Purple)
             "amber" -> setTheme(R.style.Theme_MyeFoss_Amber)
@@ -149,6 +168,7 @@ class MainActivity : AppCompatActivity() {
             "settings" -> openSettingsScreen()
             "scolarity" -> showScolarityTab()
             "grades" -> openGradesScreen()
+            "absences" -> openAbsencesScreen()
             else -> showPlanningTab()
         }
 
@@ -173,6 +193,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
         tabContainerSettings = findViewById(R.id.tabContainerSettings)
         tabContainerGrades = findViewById(R.id.tabContainerGrades)
+        tabContainerAbsences = findViewById(R.id.tabContainerAbsences)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         layoutGradesList = findViewById(R.id.layoutGradesList)
@@ -180,6 +201,13 @@ class MainActivity : AppCompatActivity() {
         tvGeneralAverage = findViewById(R.id.tvGeneralAverage)
         tvGradesSemesterLabel = findViewById(R.id.tvGradesSemesterLabel)
         spinnerSchoolYear = findViewById(R.id.spinnerSchoolYear)
+
+        btnBackFromAbsences = findViewById(R.id.btnBackFromAbsences)
+        layoutAbsencesList = findViewById(R.id.layoutAbsencesList)
+        layoutAbsencesEmptyState = findViewById(R.id.layoutAbsencesEmptyState)
+        tvAbsencesTotalHours = findViewById(R.id.tvAbsencesTotalHours)
+        tvAbsencesSummaryLabel = findViewById(R.id.tvAbsencesSummaryLabel)
+        spinnerAbsencesSchoolYear = findViewById(R.id.spinnerAbsencesSchoolYear)
 
         rgThemeMode = findViewById(R.id.rgThemeMode)
         rbThemeSystem = findViewById(R.id.rbThemeSystem)
@@ -191,6 +219,8 @@ class MainActivity : AppCompatActivity() {
         rbPaletteEmerald = findViewById(R.id.rbPaletteEmerald)
         rbPalettePurple = findViewById(R.id.rbPalettePurple)
         rbPaletteAmber = findViewById(R.id.rbPaletteAmber)
+        rbPaletteMonet = findViewById(R.id.rbPaletteMonet)
+        dividerMonet = findViewById(R.id.dividerMonet)
         switchCourseNotifications = findViewById(R.id.switchCourseNotifications)
 
         btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
@@ -236,7 +266,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.drawer_absences -> {
-                    showScolarityFeature("Absences")
+                    openAbsencesScreen()
                     true
                 }
                 R.id.drawer_lxp -> {
@@ -310,10 +340,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         cardGrades.setOnClickListener { openGradesScreen() }
-        cardAbsences.setOnClickListener { showScolarityFeature("Suivi des Absences") }
+        cardAbsences.setOnClickListener { openAbsencesScreen() }
         cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
 
         btnBackFromGrades.setOnClickListener {
+            showScolarityTab()
+        }
+
+        btnBackFromAbsences.setOnClickListener {
             showScolarityTab()
         }
 
@@ -330,6 +364,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
         tvToolbarTitle.text = "Planning"
         btnRefresh.visibility = View.VISIBLE
         bottomNavigation.menu.findItem(R.id.nav_planning)?.isChecked = true
@@ -342,6 +377,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity.visibility = View.VISIBLE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
         tvToolbarTitle.text = "Scolarité"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_scolarity)?.isChecked = true
@@ -354,6 +390,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
         tabContainerSettings.visibility = View.VISIBLE
         tvToolbarTitle.text = "Paramètres"
         btnRefresh.visibility = View.GONE
@@ -365,12 +402,27 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
         tabContainerGrades.visibility = View.VISIBLE
         tvToolbarTitle.text = "Notes & Résultats"
         btnRefresh.visibility = View.GONE
         navigationDrawer.setCheckedItem(R.id.drawer_grades)
 
         loadStudentGrades()
+    }
+
+    private fun openAbsencesScreen() {
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "absences").apply()
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.VISIBLE
+        tvToolbarTitle.text = "Suivi des Absences"
+        btnRefresh.visibility = View.GONE
+        navigationDrawer.setCheckedItem(R.id.drawer_absences)
+
+        loadStudentAbsences()
     }
 
     private fun setupThemeSettings() {
@@ -386,7 +438,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 2. Initial State for Color Palette
+        val isMonetAvailable = DynamicColors.isDynamicColorAvailable()
+        if (!isMonetAvailable) {
+            rbPaletteMonet.visibility = View.GONE
+            dividerMonet.visibility = View.GONE
+        } else {
+            rbPaletteMonet.visibility = View.VISIBLE
+            dividerMonet.visibility = View.VISIBLE
+        }
+
         when (currentPalette) {
+            "monet" -> if (isMonetAvailable) rbPaletteMonet.isChecked = true else rbPaletteDefault.isChecked = true
             "emerald" -> rbPaletteEmerald.isChecked = true
             "purple" -> rbPalettePurple.isChecked = true
             "amber" -> rbPaletteAmber.isChecked = true
@@ -412,6 +474,7 @@ class MainActivity : AppCompatActivity() {
         // Palette Change Listener
         rgPalette.setOnCheckedChangeListener { _, checkedId ->
             val targetPalette = when (checkedId) {
+                R.id.rbPaletteMonet -> "monet"
                 R.id.rbPaletteEmerald -> "emerald"
                 R.id.rbPalettePurple -> "purple"
                 R.id.rbPaletteAmber -> "amber"
@@ -643,13 +706,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchGradesFromApi(schoolYear: String): List<StudentGrade> {
-        val encodedYear = URLEncoder.encode(schoolYear, "UTF-8")
-        val endpointsToTry = listOf(
-            "https://www.myefrei.fr/api/rest/student/grades?schoolYear=$encodedYear",
-            "https://www.myefrei.fr/api-mobile/rest/student/grades?schoolYear=$encodedYear"
-        )
+    private fun fetchStudentPeriodsFromServer(mergedCookies: String): List<String> {
+        val periodsUrl = "https://www.myefrei.fr/api/rest/student/periods?withHistory=true"
+        try {
+            val conn = (URL(periodsUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("Accept", "application/json, text/plain, */*")
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/grades")
+                setRequestProperty("Origin", "https://www.myefrei.fr")
+                if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+            }
+            if (conn.responseCode in 200..299) {
+                val resp = conn.inputStream.bufferedReader().use { it.readText() }.trim()
+                android.util.Log.d("MyeFossGrades", "Periods response: $resp")
+                val foundYears = mutableListOf<String>()
+                if (resp.startsWith("[")) {
+                    val arr = JSONArray(resp)
+                    for (i in 0 until arr.length()) {
+                        val item = arr.optJSONObject(i) ?: continue
+                        val sy = item.optString("schoolYear", item.optString("name", item.optString("id", "")))
+                        if (sy.isNotBlank() && !foundYears.contains(sy)) foundYears.add(sy)
+                    }
+                } else if (resp.startsWith("{")) {
+                    val root = JSONObject(resp)
+                    val keys = root.keys()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        val arr = root.optJSONArray(k)
+                        if (arr != null) {
+                            for (i in 0 until arr.length()) {
+                                val item = arr.optJSONObject(i) ?: continue
+                                val sy = item.optString("schoolYear", item.optString("name", item.optString("id", "")))
+                                if (sy.isNotBlank() && !foundYears.contains(sy)) foundYears.add(sy)
+                            }
+                        }
+                    }
+                }
+                return foundYears
+            } else {
+                android.util.Log.w("MyeFossGrades", "Periods failed with code: ${conn.responseCode}")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MyeFossGrades", "Periods fetch error: ${e.message}")
+        }
+        return emptyList()
+    }
 
+    private fun fetchGradesFromApi(schoolYear: String): List<StudentGrade> {
         val cookieManager = CookieManager.getInstance()
         val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/grades") ?: ""
         val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
@@ -668,6 +774,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val mergedCookies = cookieMap.values.joinToString("; ")
+
+        // Fetch student periods to discover exact server format
+        val validYearsFromServer = fetchStudentPeriodsFromServer(mergedCookies)
+        android.util.Log.d("MyeFossGrades", "Valid periods from server: $validYearsFromServer")
+
+        // Build list of schoolYear candidate strings (e.g. "2024-2025", "2024/2025", "2024", etc.)
+        val candidateYears = mutableListOf(schoolYear)
+        if (schoolYear.contains("-")) {
+            candidateYears.add(schoolYear.replace("-", "/"))
+            candidateYears.add(schoolYear.split("-").first())
+        }
+        for (yr in validYearsFromServer) {
+            if (!candidateYears.contains(yr)) candidateYears.add(yr)
+        }
+
+        val endpointsToTry = mutableListOf<String>()
+        candidateYears.forEach { yr ->
+            val enc = URLEncoder.encode(yr, "UTF-8")
+            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades?schoolYear=$enc")
+        }
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/grades")
 
         for (urlStr in endpointsToTry) {
             try {
@@ -697,7 +824,8 @@ class MainActivity : AppCompatActivity() {
                         return list
                     }
                 } else {
-                    android.util.Log.w("MyeFossGrades", "Endpoint $urlStr failed with HTTP $code")
+                    val errBody = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    android.util.Log.w("MyeFossGrades", "Endpoint $urlStr failed with HTTP $code: $errBody")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossGrades", "Endpoint $urlStr exception: ${e.message}")
@@ -765,6 +893,249 @@ class MainActivity : AppCompatActivity() {
                 }
             } else if (child is JSONObject && !key.equals("student", ignoreCase = true)) {
                 extractGradesRecursive(child, ueName, outList)
+            }
+        }
+    }
+
+    private var currentSelectedAbsencesYear: String = ""
+
+    private fun setupAbsencesSchoolYearSpinner() {
+        if (isAbsencesYearSpinnerInitialized) return
+        isAbsencesYearSpinnerInitialized = true
+
+        val currentYear = getCurrentAcademicYear()
+        currentSelectedAbsencesYear = currentYear
+
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH)
+        val baseYear = if (month >= 8) year else year - 1
+
+        val yearsList = mutableListOf<String>()
+        for (i in 0..3) {
+            val y = baseYear - i
+            yearsList.add("$y-${y + 1}")
+        }
+
+        val spinnerAdapter = android.widget.ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            yearsList
+        )
+        spinnerAbsencesSchoolYear.adapter = spinnerAdapter
+        spinnerAbsencesSchoolYear.setSelection(0)
+
+        spinnerAbsencesSchoolYear.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = yearsList[position]
+                if (selected != currentSelectedAbsencesYear) {
+                    currentSelectedAbsencesYear = selected
+                    loadStudentAbsences(selected)
+                }
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun loadStudentAbsences(schoolYear: String = getCurrentAcademicYear()) {
+        setupAbsencesSchoolYearSpinner()
+        layoutAbsencesList.removeAllViews()
+
+        // 1. Load cached absences first
+        val cached = OfflineCacheManager.loadAbsences(this, schoolYear)
+        displayAbsences(cached, schoolYear)
+
+        // 2. Fetch fresh absences from server
+        lifecycleScope.launch {
+            try {
+                android.util.Log.d("MyeFossAbsences", "Fetching absences for year: '$schoolYear'...")
+                val fresh = withContext(Dispatchers.IO) {
+                    fetchAbsencesFromApi(schoolYear)
+                }
+                android.util.Log.d("MyeFossAbsences", "Received ${fresh.size} absences for year: '$schoolYear'")
+                OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
+                displayAbsences(fresh, schoolYear)
+            } catch (e: Exception) {
+                android.util.Log.e("MyeFossAbsences", "Error fetching absences: ${e.message}", e)
+                if (cached.isEmpty()) {
+                    displayAbsences(emptyList(), schoolYear)
+                }
+            }
+        }
+    }
+
+    private fun displayAbsences(absences: List<StudentAbsence>, schoolYear: String) {
+        layoutAbsencesList.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        tvAbsencesSummaryLabel.text = "Année académique $schoolYear"
+
+        if (absences.isEmpty()) {
+            tvAbsencesTotalHours.text = "0h"
+            layoutAbsencesEmptyState.visibility = View.VISIBLE
+            return
+        }
+
+        layoutAbsencesEmptyState.visibility = View.GONE
+
+        // Calculate total hours
+        var totalMinutes = 0
+        absences.forEach { abs ->
+            val hParts = abs.hours.lowercase().replace("h", ":").split(":")
+            val h = hParts.getOrNull(0)?.trim()?.toIntOrNull() ?: 1
+            val m = hParts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+            totalMinutes += (h * 60) + m
+        }
+        val displayH = totalMinutes / 60
+        val displayM = totalMinutes % 60
+        tvAbsencesTotalHours.text = if (displayM > 0) "${displayH}h${String.format(Locale.FRANCE, "%02d", displayM)}" else "${displayH}h"
+
+        absences.forEach { abs ->
+            val view = inflater.inflate(R.layout.item_absence_card, layoutAbsencesList, false)
+            val tvSubject: TextView = view.findViewById(R.id.tvAbsenceSubject)
+            val tvBadge: TextView = view.findViewById(R.id.tvAbsenceJustifiedBadge)
+            val tvDate: TextView = view.findViewById(R.id.tvAbsenceDate)
+            val tvDuration: TextView = view.findViewById(R.id.tvAbsenceDuration)
+            val tvType: TextView = view.findViewById(R.id.tvAbsenceType)
+
+            tvSubject.text = abs.courseName
+            tvDate.text = abs.date
+            tvDuration.text = "• ${abs.hours}"
+            tvType.text = if (!abs.type.isNullOrBlank()) "• ${abs.type}" else ""
+
+            if (abs.justified) {
+                tvBadge.text = "Justifiée"
+                tvBadge.setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+            } else {
+                tvBadge.text = "Non justifiée"
+                tvBadge.setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorError, android.graphics.Color.RED))
+            }
+
+            layoutAbsencesList.addView(view)
+        }
+    }
+
+    private fun fetchAbsencesFromApi(schoolYear: String): List<StudentAbsence> {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/absences") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val candidateYears = mutableListOf(schoolYear)
+        if (schoolYear.contains("-")) {
+            candidateYears.add(schoolYear.replace("-", "/"))
+            candidateYears.add(schoolYear.split("-").first())
+        }
+
+        val endpointsToTry = mutableListOf<String>()
+        candidateYears.forEach { yr ->
+            val enc = URLEncoder.encode(yr, "UTF-8")
+            endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$enc")
+        }
+        endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences")
+
+        for (urlStr in endpointsToTry) {
+            try {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 15000
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/absences")
+                    setRequestProperty("Origin", "https://www.myefrei.fr")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    android.util.Log.d("MyeFossAbsences", "Endpoint $urlStr SUCCESS HTTP $code. Length: ${response.length}")
+                    val list = parseAnyAbsencesResponse(response)
+                    return list
+                } else {
+                    val errBody = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    android.util.Log.w("MyeFossAbsences", "Endpoint $urlStr failed with HTTP $code: $errBody")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MyeFossAbsences", "Endpoint $urlStr exception: ${e.message}")
+            }
+        }
+
+        return emptyList()
+    }
+
+    private fun parseAnyAbsencesResponse(response: String): List<StudentAbsence> {
+        val list = mutableListOf<StudentAbsence>()
+        try {
+            val trimmed = response.trim()
+            if (trimmed.startsWith("[")) {
+                val arr = JSONArray(trimmed)
+                for (i in 0 until arr.length()) {
+                    val item = arr.optJSONObject(i) ?: continue
+                    extractAbsencesRecursive(item, list)
+                }
+            } else if (trimmed.startsWith("{")) {
+                val root = JSONObject(trimmed)
+                extractAbsencesRecursive(root, list)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    private fun extractAbsencesRecursive(obj: JSONObject, outList: MutableList<StudentAbsence>) {
+        val courseName = obj.optString("courseName", obj.optString("subject", obj.optString("module", obj.optString("name", ""))))
+        val hasDate = obj.has("date") || obj.has("startDate") || obj.has("start")
+        val hasDuration = obj.has("duration") || obj.has("hours") || obj.has("nbHours")
+
+        if (courseName.isNotBlank() && (hasDate || hasDuration)) {
+            val dateStr = obj.optString("date", obj.optString("startDate", ""))
+            val hoursStr = obj.optString("hours", obj.optString("duration", obj.optString("nbHours", "1h30")))
+            val isJustified = obj.optBoolean("justified", obj.optBoolean("isJustified", false))
+            val reason = obj.optString("reason", obj.optString("motif", ""))
+            val type = obj.optString("type", obj.optString("sessionType", ""))
+
+            outList.add(
+                StudentAbsence(
+                    id = obj.optString("id", outList.size.toString()),
+                    courseName = courseName,
+                    date = dateStr,
+                    hours = hoursStr,
+                    justified = isJustified,
+                    type = type.ifBlank { null },
+                    reason = reason.ifBlank { null }
+                )
+            )
+        }
+
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val k = keys.next()
+            val child = obj.opt(k)
+            if (child is JSONArray) {
+                for (i in 0 until child.length()) {
+                    val cObj = child.optJSONObject(i) ?: continue
+                    extractAbsencesRecursive(cObj, outList)
+                }
+            } else if (child is JSONObject && !k.equals("student", ignoreCase = true)) {
+                extractAbsencesRecursive(child, outList)
             }
         }
     }
@@ -1003,6 +1374,11 @@ class MainActivity : AppCompatActivity() {
         val todayCal = Calendar.getInstance(Locale.FRANCE)
         val cal = Calendar.getInstance(Locale.FRANCE)
 
+        val primaryColor = com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE)
+        val onPrimaryColor = com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary, android.graphics.Color.WHITE)
+        val onPrimaryContainerColor = com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimaryContainer, primaryColor)
+        val outlineColor = com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline, android.graphics.Color.GRAY)
+
         weekDays.forEachIndexed { index, date ->
             cal.time = date
             val chipView = inflater.inflate(R.layout.item_week_day_chip, layoutWeekStrip, false)
@@ -1026,30 +1402,30 @@ class MainActivity : AppCompatActivity() {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = true
                 chipView.alpha = 1.0f
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
+                tvDayName.setTextColor(onPrimaryColor)
+                tvDayNumber.setTextColor(onPrimaryColor)
             } else if (isToday) {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isActivated = true
                 chipView.alpha = 1.0f
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
+                tvDayName.setTextColor(onPrimaryContainerColor)
+                tvDayNumber.setTextColor(onPrimaryContainerColor)
             } else if (hasCourses) {
-                // Surbrillance subtile : chiffre mis en valeur en couleur primaire/plus claire, sans bloc lourd
+                // Surbrillance dynamique avec la couleur primaire du thème
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
                 chipView.isActivated = false
                 chipView.alpha = 1.0f
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
+                tvDayName.setTextColor(primaryColor)
+                tvDayNumber.setTextColor(primaryColor)
             } else {
-                // Journée sans cours : visiblement grisée sans surcharger visuellement
+                // Journée sans cours : visiblement grisée avec outline
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
                 chipView.isActivated = false
                 chipView.alpha = 0.38f
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_outline))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_outline))
+                tvDayName.setTextColor(outlineColor)
+                tvDayNumber.setTextColor(outlineColor)
             }
 
             chipView.setOnClickListener {
@@ -1137,20 +1513,21 @@ class MainActivity : AppCompatActivity() {
                         setBackgroundResource(R.drawable.bg_day_chip)
                         isSelected = true
                         alpha = 1.0f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimary))
+                        setTextColor(com.google.android.material.color.MaterialColors.getColor(this@MainActivity, com.google.android.material.R.attr.colorOnPrimary, android.graphics.Color.WHITE))
                     } else if (isToday) {
                         setBackgroundResource(R.drawable.bg_day_chip)
                         isActivated = true
                         alpha = 1.0f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimaryContainer))
+                        val fallbackPrimary = com.google.android.material.color.MaterialColors.getColor(this@MainActivity, com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE)
+                        setTextColor(com.google.android.material.color.MaterialColors.getColor(this@MainActivity, com.google.android.material.R.attr.colorOnPrimaryContainer, fallbackPrimary))
                     } else if (hasCourses) {
                         alpha = 1.0f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_primary))
+                        setTextColor(com.google.android.material.color.MaterialColors.getColor(this@MainActivity, com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                         setTypeface(typeface, android.graphics.Typeface.BOLD)
                     } else {
                         // Journée sans cours : grisée discrètement
                         alpha = 0.38f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_outline))
+                        setTextColor(com.google.android.material.color.MaterialColors.getColor(this@MainActivity, com.google.android.material.R.attr.colorOutline, android.graphics.Color.GRAY))
                     }
 
                     setOnClickListener {
@@ -1307,7 +1684,7 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawer(GravityCompat.START)
             return
         }
-        if (tabContainerGrades.visibility == View.VISIBLE) {
+        if (tabContainerGrades.visibility == View.VISIBLE || tabContainerAbsences.visibility == View.VISIBLE) {
             showScolarityTab()
             return
         }
