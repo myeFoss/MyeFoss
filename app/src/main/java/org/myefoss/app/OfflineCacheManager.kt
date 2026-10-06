@@ -134,6 +134,59 @@ object OfflineCacheManager {
             emptyList()
         }
     }
+
+    private const val ABSENCES_CACHE_PREFIX = "myefoss_absences_cache_"
+
+    fun saveAbsences(context: Context, absences: List<StudentAbsence>, schoolYear: String) {
+        try {
+            val safeYear = schoolYear.replace("/", "-")
+            val file = File(context.filesDir, "${ABSENCES_CACHE_PREFIX}${safeYear}.json")
+            val jsonArray = JSONArray()
+            absences.forEach { abs ->
+                val obj = JSONObject().apply {
+                    put("id", abs.id)
+                    put("courseName", abs.courseName)
+                    put("date", abs.date)
+                    put("hours", abs.hours)
+                    put("justified", abs.justified)
+                    abs.type?.let { put("type", it) }
+                    abs.reason?.let { put("reason", it) }
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadAbsences(context: Context, schoolYear: String): List<StudentAbsence> {
+        return try {
+            val safeYear = schoolYear.replace("/", "-")
+            val file = File(context.filesDir, "${ABSENCES_CACHE_PREFIX}${safeYear}.json")
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<StudentAbsence>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    StudentAbsence(
+                        id = obj.optString("id", i.toString()),
+                        courseName = obj.optString("courseName", "Cours"),
+                        date = obj.optString("date", ""),
+                        hours = obj.optString("hours", "1h30"),
+                        justified = obj.optBoolean("justified", false),
+                        type = if (obj.has("type")) obj.optString("type") else null,
+                        reason = if (obj.has("reason")) obj.optString("reason") else null
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
 
 data class StudentGrade(
@@ -144,4 +197,14 @@ data class StudentGrade(
     val ue: String = "Modules Généraux",
     val average: String? = null,
     val semester: String? = null
+)
+
+data class StudentAbsence(
+    val id: String,
+    val courseName: String,
+    val date: String,
+    val hours: String,
+    val justified: Boolean,
+    val type: String? = null,
+    val reason: String? = null
 )
