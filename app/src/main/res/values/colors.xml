@@ -1,5 +1,5 @@
 <resources>
-    <!-- Light Material 3 Colors (Fallback when dynamic color is disabled) -->
+    <!-- Light Material 3 Colors -->
     <color name="md_theme_light_primary">#0062A3</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
     <color name="md_theme_light_primaryContainer">#D0E4FF</color>
@@ -25,13 +25,15 @@
     <color name="md_theme_light_outline">#73777F</color>
     <color name="md_theme_light_outlineVariant">#C3C7CF</color>
 
-    <!-- Specific Course Status Badges -->
-    <color name="badge_exam_bg">#FFDAD6</color>
-    <color name="badge_exam_text">#BA1A1A</color>
-    <color name="badge_tp_bg">#E8DEF8</color>
-    <color name="badge_tp_text">#6750A4</color>
-    <color name="badge_remote_bg">#D1E7DD</color>
-    <color name="badge_remote_text">#0F5132</color>
-    <color name="badge_normal_bg">#E2E8F0</color>
-    <color name="badge_normal_text">#334155</color>
+    <!-- Refined M3 Pill Badges (Modern pastel backgrounds with high-contrast text) -->
+    <color name="badge_exam_bg">#FFD8D8</color>
+    <color name="badge_exam_text">#9C0006</color>
+    <color name="badge_tp_bg">#E9DDFF</color>
+    <color name="badge_tp_text">#552D96</color>
+    <color name="badge_remote_bg">#C8F5D8</color>
+    <color name="badge_remote_text">#0A5C2A</color>
+    <color name="badge_cm_bg">#D0E4FF</color>
+    <color name="badge_cm_text">#003866</color>
+    <color name="badge_normal_bg">#E6ECF5</color>
+    <color name="badge_normal_text">#2A384A</color>
 </resources>

@@ -92,27 +92,44 @@ class AgendaAdapter(
                             course.modality.equals("remote", ignoreCase = true) ||
                             course.name.contains("distanciel", ignoreCase = true)
 
+                    val isCm = course.courseActivity.equals("CM", ignoreCase = true) ||
+                            course.name.contains("magistral", ignoreCase = true)
+
                     when {
                         isExam -> {
                             tvActivityBadge.text = "Examen"
-                            tvActivityBadge.setBackgroundColor(ContextCompat.getColor(ctx, R.color.badge_exam_bg))
+                            tvActivityBadge.setBackgroundResource(R.drawable.bg_badge_pill)
+                            tvActivityBadge.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.badge_exam_bg)
                             tvActivityBadge.setTextColor(ContextCompat.getColor(ctx, R.color.badge_exam_text))
                             cardView.strokeColor = ContextCompat.getColor(ctx, R.color.badge_exam_text)
                         }
                         isTp -> {
                             tvActivityBadge.text = course.courseActivityName ?: "TP"
-                            tvActivityBadge.setBackgroundColor(ContextCompat.getColor(ctx, R.color.badge_tp_bg))
+                            tvActivityBadge.setBackgroundResource(R.drawable.bg_badge_pill)
+                            tvActivityBadge.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.badge_tp_bg)
                             tvActivityBadge.setTextColor(ContextCompat.getColor(ctx, R.color.badge_tp_text))
+                            cardView.strokeColor = ContextCompat.getColor(ctx, R.color.md_theme_light_outlineVariant)
                         }
                         isRemote -> {
                             tvActivityBadge.text = "Distanciel"
-                            tvActivityBadge.setBackgroundColor(ContextCompat.getColor(ctx, R.color.badge_remote_bg))
+                            tvActivityBadge.setBackgroundResource(R.drawable.bg_badge_pill)
+                            tvActivityBadge.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.badge_remote_bg)
                             tvActivityBadge.setTextColor(ContextCompat.getColor(ctx, R.color.badge_remote_text))
+                            cardView.strokeColor = ContextCompat.getColor(ctx, R.color.md_theme_light_outlineVariant)
+                        }
+                        isCm -> {
+                            tvActivityBadge.text = course.courseActivityName ?: "Cours Magistral"
+                            tvActivityBadge.setBackgroundResource(R.drawable.bg_badge_pill)
+                            tvActivityBadge.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.badge_cm_bg)
+                            tvActivityBadge.setTextColor(ContextCompat.getColor(ctx, R.color.badge_cm_text))
+                            cardView.strokeColor = ContextCompat.getColor(ctx, R.color.md_theme_light_outlineVariant)
                         }
                         else -> {
-                            tvActivityBadge.text = course.courseActivityName ?: (course.courseActivity ?: "Cours")
-                            tvActivityBadge.setBackgroundColor(ContextCompat.getColor(ctx, R.color.badge_normal_bg))
+                            tvActivityBadge.text = course.courseActivityName ?: (course.courseActivity ?: "Cours TD")
+                            tvActivityBadge.setBackgroundResource(R.drawable.bg_badge_pill)
+                            tvActivityBadge.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.badge_normal_bg)
                             tvActivityBadge.setTextColor(ContextCompat.getColor(ctx, R.color.badge_normal_text))
+                            cardView.strokeColor = ContextCompat.getColor(ctx, R.color.md_theme_light_outlineVariant)
                         }
                     }
 

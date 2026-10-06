@@ -111,15 +111,34 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp">
 
-                        <TextView
-                            android:id="@+id/tvCurrentPeriodLabel"
+                        <LinearLayout
+                            android:id="@+id/btnHeaderTitleWrapper"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:fontFamily="sans-serif-bold"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="20sp"
-                            android:text="Octobre 2026" />
+                            android:gravity="center_vertical"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvCurrentPeriodLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-bold"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="18sp"
+                                android:text="Octobre 2026" />
+
+                            <ImageView
+                                android:id="@+id/ivExpandIcon"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginStart="4dp"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="?attr/colorOnSurface" />
+                        </LinearLayout>
 
                         <!-- Button to jump directly back to Today -->
                         <com.google.android.material.button.MaterialButton
@@ -130,30 +149,30 @@
                             android:layout_marginEnd="4dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
                             android:text="Aujourd'hui"
                             android:textSize="12sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnPrevPeriod"
                             style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
                             app:icon="@drawable/ic_chevron_left"
                             app:iconTint="?attr/colorOnSurface" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnNextPeriod"
                             style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
                             app:icon="@drawable/ic_chevron_right"
                             app:iconTint="?attr/colorOnSurface" />
 
                     </LinearLayout>
 
-                    <!-- Google Calendar style: Horizontal 7-Day Week Strip Card -->
+                    <!-- Google Calendar style: Expandable Card (7-Day Strip OR Full Month Grid) -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -168,15 +187,48 @@
                         app:cardBackgroundColor="?attr/colorSurface">
 
                         <LinearLayout
-                            android:id="@+id/layoutWeekStrip"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:orientation="horizontal"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="4dp"
-                            android:paddingTop="6dp"
-                            android:paddingBottom="6dp" />
+                            android:orientation="vertical">
+
+                            <!-- 1. Horizontal 7-Day Week Strip -->
+                            <LinearLayout
+                                android:id="@+id/layoutWeekStrip"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingStart="4dp"
+                                android:paddingEnd="4dp"
+                                android:paddingTop="6dp"
+                                android:paddingBottom="6dp" />
+
+                            <!-- 2. Expandable Full Month Grid View -->
+                            <LinearLayout
+                                android:id="@+id/layoutMonthContainer"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="8dp"
+                                android:visibility="gone">
+
+                                <!-- Day names header for month (Lun Mar Mer...) -->
+                                <LinearLayout
+                                    android:id="@+id/layoutMonthHeaderDays"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:orientation="horizontal" />
+
+                                <!-- Month days 7-col grid -->
+                                <LinearLayout
+                                    android:id="@+id/layoutMonthGridRows"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical" />
+                            </LinearLayout>
+
+                        </LinearLayout>
 
                     </com.google.android.material.card.MaterialCardView>
 

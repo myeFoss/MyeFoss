@@ -25,12 +25,15 @@
     <color name="md_theme_dark_outline">#8D9199</color>
     <color name="md_theme_dark_outlineVariant">#43474E</color>
 
-    <color name="badge_exam_bg">#93000A</color>
-    <color name="badge_exam_text">#FFDAD6</color>
-    <color name="badge_tp_bg">#4F378B</color>
-    <color name="badge_tp_text">#E8DEF8</color>
-    <color name="badge_remote_bg">#1B4332</color>
-    <color name="badge_remote_text">#B7E4C7</color>
-    <color name="badge_normal_bg">#334155</color>
-    <color name="badge_normal_text">#CBD5E1</color>
+    <!-- Dark badges -->
+    <color name="badge_exam_bg">#570007</color>
+    <color name="badge_exam_text">#FFB4AB</color>
+    <color name="badge_tp_bg">#3E1E70</color>
+    <color name="badge_tp_text">#D0BCFF</color>
+    <color name="badge_remote_bg">#09381A</color>
+    <color name="badge_remote_text">#85E3A1</color>
+    <color name="badge_cm_bg">#003357</color>
+    <color name="badge_cm_text">#9ECAFF</color>
+    <color name="badge_normal_bg">#253040</color>
+    <color name="badge_normal_text">#D4E2F4</color>
 </resources>

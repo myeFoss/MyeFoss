@@ -2,6 +2,7 @@ package fr.myefrei.agenda
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.webkit.CookieManager
@@ -9,6 +10,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -59,12 +61,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerPlanning: LinearLayout
     private lateinit var tabContainerScolarity: ScrollView
 
-    // Planning views
+    // Planning header & calendar views
+    private lateinit var btnHeaderTitleWrapper: LinearLayout
     private lateinit var tvCurrentPeriodLabel: TextView
+    private lateinit var ivExpandIcon: ImageView
     private lateinit var btnToday: MaterialButton
     private lateinit var btnPrevPeriod: MaterialButton
     private lateinit var btnNextPeriod: MaterialButton
+
+    // Calendar containers
     private lateinit var layoutWeekStrip: LinearLayout
+    private lateinit var layoutMonthContainer: LinearLayout
+    private lateinit var layoutMonthHeaderDays: LinearLayout
+    private lateinit var layoutMonthGridRows: LinearLayout
+
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var rvAgenda: RecyclerView
 
@@ -80,9 +90,9 @@ class MainActivity : AppCompatActivity() {
     private var currentWeekCal: Calendar = Calendar.getInstance(Locale.FRANCE)
     private var selectedDayCal: Calendar = Calendar.getInstance(Locale.FRANCE)
     private var allCachedCourses: List<CourseEvent> = emptyList()
+    private var isMonthExpanded: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Material You Dynamic Colors (Android 12+)
         DynamicColors.applyToActivityIfAvailable(this)
 
         super.onCreate(savedInstanceState)
@@ -95,7 +105,7 @@ class MainActivity : AppCompatActivity() {
         // Load offline cache immediately on launch
         allCachedCourses = OfflineCacheManager.loadCourses(this)
         if (allCachedCourses.isNotEmpty()) {
-            displayWeekFromCourses(allCachedCourses)
+            displayPlanning(allCachedCourses)
         }
 
         checkSessionAndLoad()
@@ -118,11 +128,18 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
 
+        btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
+        ivExpandIcon = findViewById(R.id.ivExpandIcon)
         btnToday = findViewById(R.id.btnToday)
         btnPrevPeriod = findViewById(R.id.btnPrevPeriod)
         btnNextPeriod = findViewById(R.id.btnNextPeriod)
+
         layoutWeekStrip = findViewById(R.id.layoutWeekStrip)
+        layoutMonthContainer = findViewById(R.id.layoutMonthContainer)
+        layoutMonthHeaderDays = findViewById(R.id.layoutMonthHeaderDays)
+        layoutMonthGridRows = findViewById(R.id.layoutMonthGridRows)
+
         swipeRefresh = findViewById(R.id.swipeRefresh)
         rvAgenda = findViewById(R.id.rvAgenda)
 
@@ -192,6 +209,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Toggle Month Expand/Collapse on header title click
+        btnHeaderTitleWrapper.setOnClickListener {
+            isMonthExpanded = !isMonthExpanded
+            updateExpandState()
+        }
+
         // Return to Today button
         btnToday.setOnClickListener {
             currentWeekCal = Calendar.getInstance(Locale.FRANCE)
@@ -199,14 +222,22 @@ class MainActivity : AppCompatActivity() {
             loadAgendaForCurrentWeek()
         }
 
-        // Week navigation (< and >)
+        // Period navigation (< and >)
         btnPrevPeriod.setOnClickListener {
-            currentWeekCal.add(Calendar.DAY_OF_YEAR, -7)
+            if (isMonthExpanded) {
+                currentWeekCal.add(Calendar.MONTH, -1)
+            } else {
+                currentWeekCal.add(Calendar.DAY_OF_YEAR, -7)
+            }
             loadAgendaForCurrentWeek()
         }
 
         btnNextPeriod.setOnClickListener {
-            currentWeekCal.add(Calendar.DAY_OF_YEAR, 7)
+            if (isMonthExpanded) {
+                currentWeekCal.add(Calendar.MONTH, 1)
+            } else {
+                currentWeekCal.add(Calendar.DAY_OF_YEAR, 7)
+            }
             loadAgendaForCurrentWeek()
         }
 
@@ -224,6 +255,19 @@ class MainActivity : AppCompatActivity() {
 
         btnLogin.setOnClickListener {
             startWebSsoLogin()
+        }
+    }
+
+    private fun updateExpandState() {
+        if (isMonthExpanded) {
+            ivExpandIcon.setImageResource(R.drawable.ic_expand_less)
+            layoutWeekStrip.visibility = View.GONE
+            layoutMonthContainer.visibility = View.VISIBLE
+            renderMonthGrid(allCachedCourses)
+        } else {
+            ivExpandIcon.setImageResource(R.drawable.ic_expand_more)
+            layoutWeekStrip.visibility = View.VISIBLE
+            layoutMonthContainer.visibility = View.GONE
         }
     }
 
@@ -292,37 +336,50 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadAgendaForCurrentWeek(isSwipe: Boolean = false) {
-        val (startOfWeek, endOfWeek, weekDays) = getWeekBoundaries(currentWeekCal)
+        val (startOfWeek, endOfWeek, _) = getWeekBoundaries(currentWeekCal)
 
-        // Month / Year title on top (e.g. "Octobre 2026")
         val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.FRANCE)
-        tvCurrentPeriodLabel.text = monthFormat.format(startOfWeek).replaceFirstChar { it.uppercase() }
+        tvCurrentPeriodLabel.text = monthFormat.format(currentWeekCal.time).replaceFirstChar { it.uppercase() }
 
-        // Step 1: Immediately render from local memory / offline cache
-        displayWeekFromCourses(allCachedCourses)
+        // Step 1: Render immediately from cache
+        displayPlanning(allCachedCourses)
 
         if (!isSwipe && allCachedCourses.isEmpty()) {
             layoutLoading.visibility = View.VISIBLE
         }
 
-        // Step 2: Fetch fresh data from network in background
+        // Step 2: Fetch fresh data from network (fetch whole month range so month view also has data)
         lifecycleScope.launch {
             try {
+                val calMonth = Calendar.getInstance(Locale.FRANCE).apply {
+                    time = currentWeekCal.time
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val startMonth = calMonth.time
+                val maxDay = calMonth.getActualMaximum(Calendar.DAY_OF_MONTH)
+                calMonth.set(Calendar.DAY_OF_MONTH, maxDay)
+                calMonth.set(Calendar.HOUR_OF_DAY, 23)
+                calMonth.set(Calendar.MINUTE, 59)
+                calMonth.set(Calendar.SECOND, 59)
+                calMonth.set(Calendar.MILLISECOND, 999)
+                val endMonth = calMonth.time
+
                 val freshCourses = withContext(Dispatchers.IO) {
-                    fetchPlanningFromApi(startOfWeek, endOfWeek)
+                    fetchPlanningFromApi(startMonth, endMonth)
                 }
 
                 if (freshCourses.isNotEmpty()) {
-                    // Update cache on disk
                     OfflineCacheManager.saveCourses(this@MainActivity, freshCourses)
                     allCachedCourses = OfflineCacheManager.loadCourses(this@MainActivity)
-                    displayWeekFromCourses(allCachedCourses)
+                    displayPlanning(allCachedCourses)
                 }
 
             } catch (e: Exception) {
-                // If offline, user still sees their cached schedule smoothly
                 if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
-                    Toast.makeText(this@MainActivity, "Session expirée, reconnexion...", Toast.LENGTH_SHORT).show()
                     startSilentReauth()
                 } else if (allCachedCourses.isEmpty()) {
                     Toast.makeText(this@MainActivity, "Hors-ligne ou indisponible", Toast.LENGTH_SHORT).show()
@@ -334,12 +391,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Attempt transparent session reload if expired
     private fun startSilentReauth() {
         loginWebView.settings.javaScriptEnabled = true
         loginWebView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url?.toString() ?: return false
                 val cm = CookieManager.getInstance()
                 val c = cm.getCookie("https://www.myefrei.fr") ?: ""
                 if (c.contains("myefrei.sid")) {
@@ -352,13 +407,15 @@ class MainActivity : AppCompatActivity() {
         loginWebView.loadUrl("https://www.myefrei.fr/auth/efrei?redirectPath=" + URLEncoder.encode("portal/student/planning", "UTF-8"))
     }
 
-    private fun displayWeekFromCourses(courses: List<CourseEvent>) {
+    // Display only the selected day (or next upcoming day if empty) for a clean, non-overloaded home screen
+    private fun displayPlanning(courses: List<CourseEvent>) {
         val (_, _, weekDays) = getWeekBoundaries(currentWeekCal)
         val cal = Calendar.getInstance(Locale.FRANCE)
         val todayCal = Calendar.getInstance(Locale.FRANCE)
         val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
 
-        val daySections = weekDays.map { dayDate ->
+        // All week sections for strip dots
+        val allWeekSections = weekDays.map { dayDate ->
             cal.time = dayDate
             val dayCourses = courses.filter { course ->
                 course.startDate?.let {
@@ -375,22 +432,39 @@ class MainActivity : AppCompatActivity() {
             DaySection(dayDate, label, isToday, dayCourses)
         }
 
-        adapter.submitList(daySections)
-        renderWeekStrip(weekDays, daySections)
+        renderWeekStrip(weekDays, allWeekSections)
+        if (isMonthExpanded) {
+            renderMonthGrid(courses)
+        }
 
-        // Scroll to selected/today section
-        val targetIndex = daySections.indexOfFirst {
+        // Show focused day in list: selected day + optionally next day with courses if current has none
+        val selectedDate = selectedDayCal.time
+        val selectedSection = allWeekSections.firstOrNull {
             val dCal = Calendar.getInstance(Locale.FRANCE).apply { time = it.date }
             dCal.get(Calendar.DAY_OF_YEAR) == selectedDayCal.get(Calendar.DAY_OF_YEAR) &&
                     dCal.get(Calendar.YEAR) == selectedDayCal.get(Calendar.YEAR)
-        }.takeIf { it >= 0 } ?: daySections.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
-
-        rvAgenda.post {
-            (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(targetIndex, 0)
         }
+
+        val visibleSections = mutableListOf<DaySection>()
+        if (selectedSection != null) {
+            visibleSections.add(selectedSection)
+            // If selected day has no courses, also show the next day that has courses so user sees upcoming classes
+            if (selectedSection.courses.isEmpty()) {
+                val nextUpcoming = allWeekSections.firstOrNull {
+                    it.date.after(selectedDate) && it.courses.isNotEmpty()
+                }
+                if (nextUpcoming != null) {
+                    visibleSections.add(nextUpcoming)
+                }
+            }
+        } else {
+            visibleSections.addAll(allWeekSections)
+        }
+
+        adapter.submitList(visibleSections)
     }
 
-    // Render Google Calendar style horizontal 7-day strip
+    // Google Calendar style 7-day horizontal strip
     private fun renderWeekStrip(weekDays: List<Date>, sections: List<DaySection>) {
         layoutWeekStrip.removeAllViews()
         val inflater = LayoutInflater.from(this)
@@ -414,7 +488,6 @@ class MainActivity : AppCompatActivity() {
             val isSelected = cal.get(Calendar.YEAR) == selectedDayCal.get(Calendar.YEAR) &&
                     cal.get(Calendar.DAY_OF_YEAR) == selectedDayCal.get(Calendar.DAY_OF_YEAR)
 
-            // Has courses dot indicator
             val hasCourses = sections.getOrNull(index)?.courses?.isNotEmpty() == true
             viewIndicator.visibility = if (hasCourses) View.VISIBLE else View.INVISIBLE
 
@@ -430,14 +503,128 @@ class MainActivity : AppCompatActivity() {
 
             chipView.setOnClickListener {
                 selectedDayCal.time = date
-                renderWeekStrip(weekDays, sections)
-                // Scroll to this day's section in RecyclerView
-                (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, 0)
+                displayPlanning(allCachedCourses)
             }
 
             layoutWeekStrip.addView(chipView)
         }
     }
+
+    // Full Month Grid View when expanded
+    private fun renderMonthGrid(courses: List<CourseEvent>) {
+        layoutMonthHeaderDays.removeAllViews()
+        layoutMonthGridRows.removeAllViews()
+
+        val dayNames = listOf("L", "M", "M", "J", "V", "S", "D")
+        dayNames.forEach { name ->
+            val tv = TextView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                gravity = Gravity.CENTER
+                text = name
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSurfaceVariant))
+            }
+            layoutMonthHeaderDays.addView(tv)
+        }
+
+        val cal = Calendar.getInstance(Locale.FRANCE).apply {
+            time = currentWeekCal.time
+            set(Calendar.DAY_OF_MONTH, 1)
+        }
+        val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+        val offset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - Calendar.MONDAY
+        val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+        val todayCal = Calendar.getInstance(Locale.FRANCE)
+        val totalCells = ((offset + maxDays + 6) / 7) * 7
+
+        var dayCounter = 1
+        var currentRow: LinearLayout? = null
+
+        for (cell in 0 until totalCells) {
+            if (cell % 7 == 0) {
+                currentRow = LinearLayout(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(0, 4, 0, 4)
+                }
+                layoutMonthGridRows.addView(currentRow)
+            }
+
+            val cellContainer = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(0, 110, 1f)
+            }
+
+            if (cell >= offset && dayCounter <= maxDays) {
+                val thisDay = dayCounter
+                val cellCal = Calendar.getInstance(Locale.FRANCE).apply {
+                    time = cal.time
+                    set(Calendar.DAY_OF_MONTH, thisDay)
+                }
+
+                val isToday = cellCal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                        cellCal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+
+                val isSelectedDay = cellCal.get(Calendar.YEAR) == selectedDayCal.get(Calendar.YEAR) &&
+                        cellCal.get(Calendar.DAY_OF_YEAR) == selectedDayCal.get(Calendar.DAY_OF_YEAR)
+
+                val hasCourses = courses.any { course ->
+                    course.startDate?.let {
+                        val cCal = Calendar.getInstance(Locale.FRANCE).apply { time = it }
+                        cCal.get(Calendar.YEAR) == cellCal.get(Calendar.YEAR) &&
+                                cCal.get(Calendar.DAY_OF_YEAR) == cellCal.get(Calendar.DAY_OF_YEAR)
+                    } ?: false
+                }
+
+                val dayBtn = TextView(this).apply {
+                    layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+                    gravity = Gravity.CENTER
+                    text = thisDay.toString()
+                    textSize = 13f
+
+                    if (isSelectedDay) {
+                        setBackgroundResource(R.drawable.bg_day_chip)
+                        isSelected = true
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimary))
+                    } else if (isToday) {
+                        setBackgroundResource(R.drawable.bg_day_chip)
+                        isActivated = true
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimaryContainer))
+                    } else {
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSurface))
+                    }
+
+                    setOnClickListener {
+                        selectedDayCal.time = cellCal.time
+                        currentWeekCal.time = cellCal.time
+                        isMonthExpanded = false
+                        updateExpandState()
+                        displayPlanning(allCachedCourses)
+                    }
+                }
+
+                cellContainer.addView(dayBtn)
+
+                if (hasCourses) {
+                    val dot = View(this).apply {
+                        val size = 10
+                        layoutParams = FrameLayout.LayoutParams(size, size).apply {
+                            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                            bottomMargin = 8
+                        }
+                        setBackgroundResource(R.drawable.dot_today)
+                    }
+                    cellContainer.addView(dot)
+                }
+
+                dayCounter++
+            }
+
+            currentRow?.addView(cellContainer)
+        }
+    }
+
+    private fun spToFloat(): Float = 13f
 
     private fun fetchPlanningFromApi(startDate: Date, endDate: Date): List<CourseEvent> {
         val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
