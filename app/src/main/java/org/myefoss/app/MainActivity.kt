@@ -455,10 +455,11 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleCourseSyncWorker() {
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
             .build()
 
         val syncRequest = androidx.work.PeriodicWorkRequestBuilder<CourseSyncWorker>(
-            15, java.util.concurrent.TimeUnit.MINUTES
+            1, java.util.concurrent.TimeUnit.HOURS
         )
             .setConstraints(constraints)
             .build()
