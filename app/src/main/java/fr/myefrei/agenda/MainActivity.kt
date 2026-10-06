@@ -2,6 +2,7 @@ package fr.myefrei.agenda
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -13,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
@@ -21,7 +23,6 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.navigation.NavigationView
@@ -39,8 +40,6 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
-
-    enum class ViewMode { DAY, WEEK, MONTH }
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationDrawer: NavigationView
@@ -61,12 +60,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerScolarity: ScrollView
 
     // Planning views
-    private lateinit var toggleViewMode: MaterialButtonToggleGroup
-    private lateinit var swipeRefresh: SwipeRefreshLayout
-    private lateinit var rvAgenda: RecyclerView
     private lateinit var tvCurrentPeriodLabel: TextView
+    private lateinit var btnToday: MaterialButton
     private lateinit var btnPrevPeriod: MaterialButton
     private lateinit var btnNextPeriod: MaterialButton
+    private lateinit var layoutWeekStrip: LinearLayout
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var rvAgenda: RecyclerView
 
     // Scolarity views
     private lateinit var cardGrades: MaterialCardView
@@ -77,8 +77,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnLogin: MaterialButton
 
     private lateinit var adapter: AgendaAdapter
-    private var currentCalendar: Calendar = Calendar.getInstance(Locale.FRANCE)
-    private var currentViewMode: ViewMode = ViewMode.WEEK
+    private var currentWeekCal: Calendar = Calendar.getInstance(Locale.FRANCE)
+    private var selectedDayCal: Calendar = Calendar.getInstance(Locale.FRANCE)
+    private var allCachedCourses: List<CourseEvent> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Material You Dynamic Colors (Android 12+)
@@ -90,6 +91,12 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         setupRecyclerView()
+
+        // Load offline cache immediately on launch
+        allCachedCourses = OfflineCacheManager.loadCourses(this)
+        if (allCachedCourses.isNotEmpty()) {
+            displayWeekFromCourses(allCachedCourses)
+        }
 
         checkSessionAndLoad()
     }
@@ -111,12 +118,13 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
 
-        toggleViewMode = findViewById(R.id.toggleViewMode)
-        swipeRefresh = findViewById(R.id.swipeRefresh)
-        rvAgenda = findViewById(R.id.rvAgenda)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
+        btnToday = findViewById(R.id.btnToday)
         btnPrevPeriod = findViewById(R.id.btnPrevPeriod)
         btnNextPeriod = findViewById(R.id.btnNextPeriod)
+        layoutWeekStrip = findViewById(R.id.layoutWeekStrip)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+        rvAgenda = findViewById(R.id.rvAgenda)
 
         cardGrades = findViewById(R.id.cardGrades)
         cardAbsences = findViewById(R.id.cardAbsences)
@@ -126,7 +134,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // Drawer toggle
         btnMenuDrawer.setOnClickListener {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 drawerLayout.closeDrawer(GravityCompat.START)
@@ -135,7 +142,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Drawer navigation items
         navigationDrawer.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.START)
             when (item.itemId) {
@@ -166,7 +172,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Bottom Navigation Bar tabs
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_planning -> {
@@ -187,46 +192,32 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // View Mode Toggle (Jour / Semaine / Mois)
-        toggleViewMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
-                currentViewMode = when (checkedId) {
-                    R.id.btnModeDay -> ViewMode.DAY
-                    R.id.btnModeMonth -> ViewMode.MONTH
-                    else -> ViewMode.WEEK
-                }
-                loadAgendaForCurrentPeriod()
-            }
+        // Return to Today button
+        btnToday.setOnClickListener {
+            currentWeekCal = Calendar.getInstance(Locale.FRANCE)
+            selectedDayCal = Calendar.getInstance(Locale.FRANCE)
+            loadAgendaForCurrentWeek()
         }
 
-        // Period navigation (Previous / Next)
+        // Week navigation (< and >)
         btnPrevPeriod.setOnClickListener {
-            when (currentViewMode) {
-                ViewMode.DAY -> currentCalendar.add(Calendar.DAY_OF_YEAR, -1)
-                ViewMode.WEEK -> currentCalendar.add(Calendar.DAY_OF_YEAR, -7)
-                ViewMode.MONTH -> currentCalendar.add(Calendar.MONTH, -1)
-            }
-            loadAgendaForCurrentPeriod()
+            currentWeekCal.add(Calendar.DAY_OF_YEAR, -7)
+            loadAgendaForCurrentWeek()
         }
 
         btnNextPeriod.setOnClickListener {
-            when (currentViewMode) {
-                ViewMode.DAY -> currentCalendar.add(Calendar.DAY_OF_YEAR, 1)
-                ViewMode.WEEK -> currentCalendar.add(Calendar.DAY_OF_YEAR, 7)
-                ViewMode.MONTH -> currentCalendar.add(Calendar.MONTH, 1)
-            }
-            loadAgendaForCurrentPeriod()
+            currentWeekCal.add(Calendar.DAY_OF_YEAR, 7)
+            loadAgendaForCurrentWeek()
         }
 
         btnRefresh.setOnClickListener {
-            loadAgendaForCurrentPeriod()
+            loadAgendaForCurrentWeek()
         }
 
         swipeRefresh.setOnRefreshListener {
-            loadAgendaForCurrentPeriod(isSwipe = true)
+            loadAgendaForCurrentWeek(isSwipe = true)
         }
 
-        // Scolarity card clicks
         cardGrades.setOnClickListener { showScolarityFeature("Notes & Résultats") }
         cardAbsences.setOnClickListener { showScolarityFeature("Suivi des Absences") }
         cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
@@ -252,9 +243,9 @@ class MainActivity : AppCompatActivity() {
     private fun checkSessionAndLoad() {
         val cookieManager = CookieManager.getInstance()
         val cookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
-        if (cookies.contains("myefrei.sid")) {
+        if (cookies.contains("myefrei.sid") || allCachedCourses.isNotEmpty()) {
             showScreen(Screen.APP)
-            loadAgendaForCurrentPeriod()
+            loadAgendaForCurrentWeek()
         } else {
             showScreen(Screen.LOGIN)
         }
@@ -288,7 +279,7 @@ class MainActivity : AppCompatActivity() {
                     if (c.contains("myefrei.sid")) {
                         loginWebView.visibility = View.GONE
                         showScreen(Screen.APP)
-                        loadAgendaForCurrentPeriod()
+                        loadAgendaForCurrentWeek()
                         return true
                     }
                 }
@@ -300,60 +291,151 @@ class MainActivity : AppCompatActivity() {
         loginWebView.loadUrl(authUrl)
     }
 
-    private fun loadAgendaForCurrentPeriod(isSwipe: Boolean = false) {
-        val (startDate, endDate, periodDays, headerLabel) = getPeriodBoundaries(currentCalendar, currentViewMode)
-        tvCurrentPeriodLabel.text = headerLabel
+    private fun loadAgendaForCurrentWeek(isSwipe: Boolean = false) {
+        val (startOfWeek, endOfWeek, weekDays) = getWeekBoundaries(currentWeekCal)
 
-        if (!isSwipe) layoutLoading.visibility = View.VISIBLE
+        // Month / Year title on top (e.g. "Octobre 2026")
+        val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.FRANCE)
+        tvCurrentPeriodLabel.text = monthFormat.format(startOfWeek).replaceFirstChar { it.uppercase() }
 
+        // Step 1: Immediately render from local memory / offline cache
+        displayWeekFromCourses(allCachedCourses)
+
+        if (!isSwipe && allCachedCourses.isEmpty()) {
+            layoutLoading.visibility = View.VISIBLE
+        }
+
+        // Step 2: Fetch fresh data from network in background
         lifecycleScope.launch {
             try {
-                val courses = withContext(Dispatchers.IO) {
-                    fetchPlanningFromApi(startDate, endDate)
+                val freshCourses = withContext(Dispatchers.IO) {
+                    fetchPlanningFromApi(startOfWeek, endOfWeek)
                 }
 
-                val cal = Calendar.getInstance(Locale.FRANCE)
-                val todayCal = Calendar.getInstance(Locale.FRANCE)
-                val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
-
-                val daySections = periodDays.map { dayDate ->
-                    cal.time = dayDate
-                    val dayCourses = courses.filter { course ->
-                        course.startDate?.let {
-                            val cCal = Calendar.getInstance(Locale.FRANCE).apply { time = it }
-                            cCal.get(Calendar.YEAR) == cal.get(Calendar.YEAR) &&
-                                    cCal.get(Calendar.DAY_OF_YEAR) == cal.get(Calendar.DAY_OF_YEAR)
-                        } ?: false
-                    }.sortedBy { it.startDate ?: Date(0) }
-
-                    val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
-                            cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
-
-                    val label = dayLabelFormat.format(dayDate).replaceFirstChar { it.uppercase() }
-                    DaySection(dayDate, label, isToday, dayCourses)
-                }
-
-                adapter.submitList(daySections)
-
-                // Scroll to current day or current course
-                val todayIndex = daySections.indexOfFirst { it.isToday }
-                if (todayIndex >= 0) {
-                    rvAgenda.post {
-                        (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(todayIndex, 0)
-                    }
+                if (freshCourses.isNotEmpty()) {
+                    // Update cache on disk
+                    OfflineCacheManager.saveCourses(this@MainActivity, freshCourses)
+                    allCachedCourses = OfflineCacheManager.loadCourses(this@MainActivity)
+                    displayWeekFromCourses(allCachedCourses)
                 }
 
             } catch (e: Exception) {
+                // If offline, user still sees their cached schedule smoothly
                 if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
-                    Toast.makeText(this@MainActivity, "Session expirée, veuillez vous reconnecter", Toast.LENGTH_SHORT).show()
-                    logout()
-                } else {
-                    Toast.makeText(this@MainActivity, "Erreur de chargement: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Session expirée, reconnexion...", Toast.LENGTH_SHORT).show()
+                    startSilentReauth()
+                } else if (allCachedCourses.isEmpty()) {
+                    Toast.makeText(this@MainActivity, "Hors-ligne ou indisponible", Toast.LENGTH_SHORT).show()
                 }
             } finally {
                 layoutLoading.visibility = View.GONE
                 swipeRefresh.isRefreshing = false
             }
+        }
+    }
+
+    // Attempt transparent session reload if expired
+    private fun startSilentReauth() {
+        loginWebView.settings.javaScriptEnabled = true
+        loginWebView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                val cm = CookieManager.getInstance()
+                val c = cm.getCookie("https://www.myefrei.fr") ?: ""
+                if (c.contains("myefrei.sid")) {
+                    loadAgendaForCurrentWeek()
+                    return true
+                }
+                return false
+            }
+        }
+        loginWebView.loadUrl("https://www.myefrei.fr/auth/efrei?redirectPath=" + URLEncoder.encode("portal/student/planning", "UTF-8"))
+    }
+
+    private fun displayWeekFromCourses(courses: List<CourseEvent>) {
+        val (_, _, weekDays) = getWeekBoundaries(currentWeekCal)
+        val cal = Calendar.getInstance(Locale.FRANCE)
+        val todayCal = Calendar.getInstance(Locale.FRANCE)
+        val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
+
+        val daySections = weekDays.map { dayDate ->
+            cal.time = dayDate
+            val dayCourses = courses.filter { course ->
+                course.startDate?.let {
+                    val cCal = Calendar.getInstance(Locale.FRANCE).apply { time = it }
+                    cCal.get(Calendar.YEAR) == cal.get(Calendar.YEAR) &&
+                            cCal.get(Calendar.DAY_OF_YEAR) == cal.get(Calendar.DAY_OF_YEAR)
+                } ?: false
+            }.sortedBy { it.startDate ?: Date(0) }
+
+            val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                    cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+
+            val label = dayLabelFormat.format(dayDate).replaceFirstChar { it.uppercase() }
+            DaySection(dayDate, label, isToday, dayCourses)
+        }
+
+        adapter.submitList(daySections)
+        renderWeekStrip(weekDays, daySections)
+
+        // Scroll to selected/today section
+        val targetIndex = daySections.indexOfFirst {
+            val dCal = Calendar.getInstance(Locale.FRANCE).apply { time = it.date }
+            dCal.get(Calendar.DAY_OF_YEAR) == selectedDayCal.get(Calendar.DAY_OF_YEAR) &&
+                    dCal.get(Calendar.YEAR) == selectedDayCal.get(Calendar.YEAR)
+        }.takeIf { it >= 0 } ?: daySections.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
+
+        rvAgenda.post {
+            (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(targetIndex, 0)
+        }
+    }
+
+    // Render Google Calendar style horizontal 7-day strip
+    private fun renderWeekStrip(weekDays: List<Date>, sections: List<DaySection>) {
+        layoutWeekStrip.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+        val dayNames = listOf("LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM")
+        val todayCal = Calendar.getInstance(Locale.FRANCE)
+        val cal = Calendar.getInstance(Locale.FRANCE)
+
+        weekDays.forEachIndexed { index, date ->
+            cal.time = date
+            val chipView = inflater.inflate(R.layout.item_week_day_chip, layoutWeekStrip, false)
+            val tvDayName: TextView = chipView.findViewById(R.id.tvDayName)
+            val tvDayNumber: TextView = chipView.findViewById(R.id.tvDayNumber)
+            val viewIndicator: View = chipView.findViewById(R.id.viewCourseIndicator)
+
+            tvDayName.text = dayNames.getOrElse(index) { "" }
+            tvDayNumber.text = cal.get(Calendar.DAY_OF_MONTH).toString()
+
+            val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                    cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+
+            val isSelected = cal.get(Calendar.YEAR) == selectedDayCal.get(Calendar.YEAR) &&
+                    cal.get(Calendar.DAY_OF_YEAR) == selectedDayCal.get(Calendar.DAY_OF_YEAR)
+
+            // Has courses dot indicator
+            val hasCourses = sections.getOrNull(index)?.courses?.isNotEmpty() == true
+            viewIndicator.visibility = if (hasCourses) View.VISIBLE else View.INVISIBLE
+
+            if (isSelected) {
+                chipView.isSelected = true
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
+            } else if (isToday) {
+                chipView.isActivated = true
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
+            }
+
+            chipView.setOnClickListener {
+                selectedDayCal.time = date
+                renderWeekStrip(weekDays, sections)
+                // Scroll to this day's section in RecyclerView
+                (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, 0)
+            }
+
+            layoutWeekStrip.addView(chipView)
         }
     }
 
@@ -410,93 +492,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private data class PeriodResult(
-        val startDate: Date,
-        val endDate: Date,
-        val days: List<Date>,
-        val label: String
-    )
-
-    private fun getPeriodBoundaries(referenceCal: Calendar, mode: ViewMode): PeriodResult {
-        return when (mode) {
-            ViewMode.DAY -> {
-                val cal = Calendar.getInstance(Locale.FRANCE).apply {
-                    time = referenceCal.time
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                val start = cal.time
-                val dayList = listOf(start)
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.time
-
-                val dayFmt = SimpleDateFormat("EEEE d MMMM yyyy", Locale.FRANCE)
-                val label = dayFmt.format(start).replaceFirstChar { it.uppercase() }
-                PeriodResult(start, end, dayList, label)
-            }
-            ViewMode.WEEK -> {
-                val cal = Calendar.getInstance(Locale.FRANCE).apply {
-                    time = referenceCal.time
-                    firstDayOfWeek = Calendar.MONDAY
-                    val dayOfWeek = get(Calendar.DAY_OF_WEEK)
-                    val diff = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
-                    add(Calendar.DAY_OF_MONTH, diff)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-
-                val weekDays = mutableListOf<Date>()
-                val start = cal.time
-                for (i in 0 until 7) {
-                    weekDays.add(cal.time)
-                    cal.add(Calendar.DAY_OF_MONTH, 1)
-                }
-                cal.add(Calendar.DAY_OF_MONTH, -1)
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.time
-
-                val weekHeaderFormat = SimpleDateFormat("d MMMM yyyy", Locale.FRANCE)
-                val label = "Semaine du ${weekHeaderFormat.format(start)}"
-                PeriodResult(start, end, weekDays, label)
-            }
-            ViewMode.MONTH -> {
-                val cal = Calendar.getInstance(Locale.FRANCE).apply {
-                    time = referenceCal.time
-                    set(Calendar.DAY_OF_MONTH, 1)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                val start = cal.time
-                val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-                val monthDays = mutableListOf<Date>()
-                for (i in 1..maxDay) {
-                    monthDays.add(cal.time)
-                    cal.add(Calendar.DAY_OF_MONTH, 1)
-                }
-                cal.add(Calendar.DAY_OF_MONTH, -1)
-                cal.set(Calendar.HOUR_OF_DAY, 23)
-                cal.set(Calendar.MINUTE, 59)
-                cal.set(Calendar.SECOND, 59)
-                cal.set(Calendar.MILLISECOND, 999)
-                val end = cal.time
-
-                val monthFmt = SimpleDateFormat("MMMM yyyy", Locale.FRANCE)
-                val label = monthFmt.format(start).replaceFirstChar { it.uppercase() }
-                PeriodResult(start, end, monthDays, label)
-            }
+    private fun getWeekBoundaries(referenceCal: Calendar): Triple<Date, Date, List<Date>> {
+        val cal = Calendar.getInstance(Locale.FRANCE).apply {
+            time = referenceCal.time
+            firstDayOfWeek = Calendar.MONDAY
+            val dayOfWeek = get(Calendar.DAY_OF_WEEK)
+            val diff = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
+            add(Calendar.DAY_OF_MONTH, diff)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
+
+        val weekDays = mutableListOf<Date>()
+        val start = cal.time
+
+        for (i in 0 until 7) {
+            weekDays.add(cal.time)
+            cal.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        cal.add(Calendar.DAY_OF_MONTH, -1)
+        cal.set(Calendar.HOUR_OF_DAY, 23)
+        cal.set(Calendar.MINUTE, 59)
+        cal.set(Calendar.SECOND, 59)
+        cal.set(Calendar.MILLISECOND, 999)
+        val end = cal.time
+
+        return Triple(start, end, weekDays)
     }
 
     private fun logout() {
