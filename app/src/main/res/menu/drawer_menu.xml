@@ -16,6 +16,10 @@
             android:id="@+id/drawer_lxp"
             android:icon="@drawable/ic_book"
             android:title="LXP / E-learning" />
+        <item
+            android:id="@+id/drawer_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="Paramètres" />
     </group>
 
     <item android:title="Compte">

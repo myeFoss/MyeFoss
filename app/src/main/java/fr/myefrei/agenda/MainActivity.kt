@@ -60,6 +60,13 @@ class MainActivity : AppCompatActivity() {
     // Tab containers
     private lateinit var tabContainerPlanning: LinearLayout
     private lateinit var tabContainerScolarity: ScrollView
+    private lateinit var tabContainerSettings: ScrollView
+
+    // Settings views
+    private lateinit var rgThemeMode: android.widget.RadioGroup
+    private lateinit var rbThemeSystem: android.widget.RadioButton
+    private lateinit var rbThemeLight: android.widget.RadioButton
+    private lateinit var rbThemeDark: android.widget.RadioButton
 
     // Planning header & calendar views
     private lateinit var btnHeaderTitleWrapper: LinearLayout
@@ -93,6 +100,10 @@ class MainActivity : AppCompatActivity() {
     private var isMonthExpanded: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
+        val savedThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(savedThemeMode)
+
         DynamicColors.applyToActivityIfAvailable(this)
 
         super.onCreate(savedInstanceState)
@@ -127,6 +138,12 @@ class MainActivity : AppCompatActivity() {
 
         tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
+        tabContainerSettings = findViewById(R.id.tabContainerSettings)
+
+        rgThemeMode = findViewById(R.id.rgThemeMode)
+        rbThemeSystem = findViewById(R.id.rbThemeSystem)
+        rbThemeLight = findViewById(R.id.rbThemeLight)
+        rbThemeDark = findViewById(R.id.rbThemeDark)
 
         btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
@@ -181,6 +198,10 @@ class MainActivity : AppCompatActivity() {
                     showScolarityFeature("LXP / E-learning")
                     true
                 }
+                R.id.drawer_settings -> {
+                    bottomNavigation.selectedItemId = R.id.nav_settings
+                    true
+                }
                 R.id.drawer_logout -> {
                     logout()
                     true
@@ -194,6 +215,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_planning -> {
                     tabContainerPlanning.visibility = View.VISIBLE
                     tabContainerScolarity.visibility = View.GONE
+                    tabContainerSettings.visibility = View.GONE
                     tvToolbarTitle.text = "Planning"
                     btnRefresh.visibility = View.VISIBLE
                     true
@@ -201,7 +223,16 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_scolarity -> {
                     tabContainerPlanning.visibility = View.GONE
                     tabContainerScolarity.visibility = View.VISIBLE
+                    tabContainerSettings.visibility = View.GONE
                     tvToolbarTitle.text = "Scolarité"
+                    btnRefresh.visibility = View.GONE
+                    true
+                }
+                R.id.nav_settings -> {
+                    tabContainerPlanning.visibility = View.GONE
+                    tabContainerScolarity.visibility = View.GONE
+                    tabContainerSettings.visibility = View.VISIBLE
+                    tvToolbarTitle.text = "Paramètres"
                     btnRefresh.visibility = View.GONE
                     true
                 }
@@ -253,8 +284,32 @@ class MainActivity : AppCompatActivity() {
         cardAbsences.setOnClickListener { showScolarityFeature("Suivi des Absences") }
         cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
 
+        setupThemeSettings()
+
         btnLogin.setOnClickListener {
             startWebSsoLogin()
+        }
+    }
+
+    private fun setupThemeSettings() {
+        val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
+        val currentThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
+        when (currentThemeMode) {
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> rbThemeLight.isChecked = true
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> rbThemeDark.isChecked = true
+            else -> rbThemeSystem.isChecked = true
+        }
+
+        rgThemeMode.setOnCheckedChangeListener { _, checkedId ->
+            val targetMode = when (checkedId) {
+                R.id.rbThemeLight -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                R.id.rbThemeDark -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+
+            prefs.edit().putInt("theme_mode", targetMode).apply()
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
         }
     }
 
@@ -502,12 +557,12 @@ class MainActivity : AppCompatActivity() {
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
             } else if (hasCourses) {
-                // Surbrillance pour les jours avec cours
-                chipView.setBackgroundResource(R.drawable.bg_day_has_courses)
+                // Surbrillance subtile : chiffre mis en valeur en couleur primaire/plus claire, sans bloc lourd
+                chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
                 chipView.isActivated = false
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSecondaryContainer))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSecondaryContainer))
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
             } else {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
@@ -606,8 +661,7 @@ class MainActivity : AppCompatActivity() {
                         isActivated = true
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimaryContainer))
                     } else if (hasCourses) {
-                        setBackgroundResource(R.drawable.bg_day_has_courses)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSecondaryContainer))
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_primary))
                         setTypeface(typeface, android.graphics.Typeface.BOLD)
                     } else {
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSurface))
