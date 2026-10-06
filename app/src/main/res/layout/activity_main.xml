@@ -562,6 +562,23 @@
                                     android:textSize="15sp"
                                     android:fontFamily="sans-serif-medium" />
 
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="1dp"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="?attr/colorOutlineVariant" />
+
+                                <RadioButton
+                                    android:id="@+id/rbThemeAmoled"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:padding="12dp"
+                                    android:text="Noir profond (Écran OLED)"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="15sp"
+                                    android:fontFamily="sans-serif-medium" />
+
                             </RadioGroup>
 
                         </com.google.android.material.card.MaterialCardView>
@@ -599,30 +616,150 @@
                                     android:fontFamily="sans-serif-bold"
                                     android:text="Efrei Agenda"
                                     android:textColor="?attr/colorOnSurface"
-                                    android:textSize="16sp" />
+                                    android:textSize="17sp" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="Version 1.0 (Pixel System Style)"
                                     android:textColor="?attr/colorOnSurfaceVariant"
-                                    android:textSize="13sp" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
-                                    android:text="Material You M3 avec cache hors-ligne et synchronisation temps réel."
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    android:textSize="12sp" />
-
+                                    android:textSize="14sp"
+                                    android:text="Votre emploi du temps et votre scolarité en un coup d'œil, fluide et disponible même sans connexion internet." />
                             </LinearLayout>
 
                         </com.google.android.material.card.MaterialCardView>
 
                     </LinearLayout>
                 </ScrollView>
+
+                <!-- 4. GRADES / NOTES VIEW CONTAINER -->
+                <LinearLayout
+                    android:id="@+id/tabContainerGrades"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <!-- Header Back to Scolarité -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnBackFromGrades"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            app:icon="@drawable/ic_chevron_left"
+                            app:iconTint="?attr/colorOnSurface" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Notes &amp; Résultats"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="24dp">
+
+                            <!-- Average card -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:layout_marginBottom="16dp"
+                                app:cardCornerRadius="20dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="?attr/colorOutlineVariant"
+                                app:cardBackgroundColor="?attr/colorSurface">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:padding="20dp">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="sans-serif-bold"
+                                            android:text="Moyenne Générale"
+                                            android:textColor="?attr/colorOnSurface"
+                                            android:textSize="16sp" />
+
+                                        <TextView
+                                            android:id="@+id/tvGradesSemesterLabel"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="Semestre en cours (2025 - 2026)"
+                                            android:textColor="?attr/colorOnSurfaceVariant"
+                                            android:textSize="13sp" />
+                                    </LinearLayout>
+
+                                    <TextView
+                                        android:id="@+id/tvGeneralAverage"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:textColor="?attr/colorPrimary"
+                                        android:textSize="24sp"
+                                        android:text="14.8" />
+
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-bold"
+                                android:text="Dernières évaluations"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="13sp"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.05"
+                                android:layout_marginBottom="12dp" />
+
+                            <!-- List of grades container -->
+                            <LinearLayout
+                                android:id="@+id/layoutGradesList"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+
+                        </LinearLayout>
+                    </ScrollView>
+
+                </LinearLayout>
 
             </FrameLayout>
 

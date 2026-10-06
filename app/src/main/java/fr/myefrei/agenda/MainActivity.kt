@@ -61,12 +61,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerPlanning: LinearLayout
     private lateinit var tabContainerScolarity: ScrollView
     private lateinit var tabContainerSettings: ScrollView
+    private lateinit var tabContainerGrades: LinearLayout
+
+    // Grades views
+    private lateinit var btnBackFromGrades: MaterialButton
+    private lateinit var layoutGradesList: LinearLayout
 
     // Settings views
     private lateinit var rgThemeMode: android.widget.RadioGroup
     private lateinit var rbThemeSystem: android.widget.RadioButton
     private lateinit var rbThemeLight: android.widget.RadioButton
     private lateinit var rbThemeDark: android.widget.RadioButton
+    private lateinit var rbThemeAmoled: android.widget.RadioButton
 
     // Planning header & calendar views
     private lateinit var btnHeaderTitleWrapper: LinearLayout
@@ -139,11 +145,16 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
         tabContainerSettings = findViewById(R.id.tabContainerSettings)
+        tabContainerGrades = findViewById(R.id.tabContainerGrades)
+
+        btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
+        layoutGradesList = findViewById(R.id.layoutGradesList)
 
         rgThemeMode = findViewById(R.id.rgThemeMode)
         rbThemeSystem = findViewById(R.id.rbThemeSystem)
         rbThemeLight = findViewById(R.id.rbThemeLight)
         rbThemeDark = findViewById(R.id.rbThemeDark)
+        rbThemeAmoled = findViewById(R.id.rbThemeAmoled)
 
         btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
@@ -184,22 +195,19 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.drawer_grades -> {
-                    bottomNavigation.selectedItemId = R.id.nav_scolarity
-                    showScolarityFeature("Notes & Résultats")
+                    openGradesScreen()
                     true
                 }
                 R.id.drawer_absences -> {
-                    bottomNavigation.selectedItemId = R.id.nav_scolarity
                     showScolarityFeature("Absences")
                     true
                 }
                 R.id.drawer_lxp -> {
-                    bottomNavigation.selectedItemId = R.id.nav_scolarity
                     showScolarityFeature("LXP / E-learning")
                     true
                 }
                 R.id.drawer_settings -> {
-                    bottomNavigation.selectedItemId = R.id.nav_settings
+                    openSettingsScreen()
                     true
                 }
                 R.id.drawer_logout -> {
@@ -213,27 +221,11 @@ class MainActivity : AppCompatActivity() {
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_planning -> {
-                    tabContainerPlanning.visibility = View.VISIBLE
-                    tabContainerScolarity.visibility = View.GONE
-                    tabContainerSettings.visibility = View.GONE
-                    tvToolbarTitle.text = "Planning"
-                    btnRefresh.visibility = View.VISIBLE
+                    showPlanningTab()
                     true
                 }
                 R.id.nav_scolarity -> {
-                    tabContainerPlanning.visibility = View.GONE
-                    tabContainerScolarity.visibility = View.VISIBLE
-                    tabContainerSettings.visibility = View.GONE
-                    tvToolbarTitle.text = "Scolarité"
-                    btnRefresh.visibility = View.GONE
-                    true
-                }
-                R.id.nav_settings -> {
-                    tabContainerPlanning.visibility = View.GONE
-                    tabContainerScolarity.visibility = View.GONE
-                    tabContainerSettings.visibility = View.VISIBLE
-                    tvToolbarTitle.text = "Paramètres"
-                    btnRefresh.visibility = View.GONE
+                    showScolarityTab()
                     true
                 }
                 else -> false
@@ -280,9 +272,13 @@ class MainActivity : AppCompatActivity() {
             loadAgendaForCurrentWeek(isSwipe = true)
         }
 
-        cardGrades.setOnClickListener { showScolarityFeature("Notes & Résultats") }
+        cardGrades.setOnClickListener { openGradesScreen() }
         cardAbsences.setOnClickListener { showScolarityFeature("Suivi des Absences") }
         cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
+
+        btnBackFromGrades.setOnClickListener {
+            showScolarityTab()
+        }
 
         setupThemeSettings()
 
@@ -291,27 +287,119 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showPlanningTab() {
+        tabContainerPlanning.visibility = View.VISIBLE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tvToolbarTitle.text = "Planning"
+        btnRefresh.visibility = View.VISIBLE
+    }
+
+    private fun showScolarityTab() {
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.VISIBLE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tvToolbarTitle.text = "Scolarité"
+        btnRefresh.visibility = View.GONE
+    }
+
+    private fun openSettingsScreen() {
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tabContainerSettings.visibility = View.VISIBLE
+        tvToolbarTitle.text = "Paramètres"
+        btnRefresh.visibility = View.GONE
+    }
+
+    private fun openGradesScreen() {
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.VISIBLE
+        tvToolbarTitle.text = "Notes & Résultats"
+        btnRefresh.visibility = View.GONE
+
+        loadStudentGrades()
+    }
+
     private fun setupThemeSettings() {
         val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
         val currentThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        val isAmoled = prefs.getBoolean("theme_amoled", false)
 
-        when (currentThemeMode) {
-            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> rbThemeLight.isChecked = true
-            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> rbThemeDark.isChecked = true
+        when {
+            isAmoled -> rbThemeAmoled.isChecked = true
+            currentThemeMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> rbThemeLight.isChecked = true
+            currentThemeMode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> rbThemeDark.isChecked = true
             else -> rbThemeSystem.isChecked = true
         }
 
         rgThemeMode.setOnCheckedChangeListener { _, checkedId ->
-            val targetMode = when (checkedId) {
-                R.id.rbThemeLight -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                R.id.rbThemeDark -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            var targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            var enableAmoled = false
+
+            when (checkedId) {
+                R.id.rbThemeLight -> {
+                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                }
+                R.id.rbThemeDark -> {
+                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                }
+                R.id.rbThemeAmoled -> {
+                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                    enableAmoled = true
+                }
+                else -> {
+                    targetMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
             }
 
-            prefs.edit().putInt("theme_mode", targetMode).apply()
+            prefs.edit()
+                .putInt("theme_mode", targetMode)
+                .putBoolean("theme_amoled", enableAmoled)
+                .apply()
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
         }
     }
+
+    private fun loadStudentGrades() {
+        layoutGradesList.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        // Mock grades based on official Efrei curriculum modules for display
+        val sampleGrades = listOf(
+            GradeItem("Architecture Cloud & Microservices", "16.5 / 20", "Projet Final • Coeff 3", "28/09/2026"),
+            GradeItem("DevOps, CI/CD & Kubernetes", "15.0 / 20", "TP Évalué • Coeff 2", "22/09/2026"),
+            GradeItem("Sécurité des Applications Web", "14.0 / 20", "Partiel Écrit • Coeff 2", "15/09/2026"),
+            GradeItem("Management de Projet Agile", "17.0 / 20", "Soutenance • Coeff 1.5", "10/09/2026"),
+            GradeItem("Anglais Professionnel & Toeic", "15.5 / 20", "Contrôle Continu • Coeff 1", "04/09/2026")
+        )
+
+        sampleGrades.forEach { item ->
+            val gradeCard = inflater.inflate(R.layout.item_grade_card, layoutGradesList, false)
+            val tvName: TextView = gradeCard.findViewById(R.id.tvCourseName)
+            val tvValue: TextView = gradeCard.findViewById(R.id.tvGradeValue)
+            val tvDetails: TextView = gradeCard.findViewById(R.id.tvGradeDetails)
+            val tvDate: TextView = gradeCard.findViewById(R.id.tvGradeDate)
+
+            tvName.text = item.courseName
+            tvValue.text = item.value
+            tvDetails.text = item.details
+            tvDate.text = item.date
+
+            layoutGradesList.addView(gradeCard)
+        }
+    }
+
+    data class GradeItem(
+        val courseName: String,
+        val value: String,
+        val details: String,
+        val date: String
+    )
 
     private fun updateExpandState() {
         if (isMonthExpanded) {
@@ -813,6 +901,18 @@ class MainActivity : AppCompatActivity() {
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
+            return
+        }
+        if (tabContainerGrades.visibility == View.VISIBLE) {
+            showScolarityTab()
+            return
+        }
+        if (tabContainerSettings.visibility == View.VISIBLE) {
+            showPlanningTab()
+            return
+        }
+        if (tabContainerScolarity.visibility == View.VISIBLE) {
+            bottomNavigation.selectedItemId = R.id.nav_planning
             return
         }
         if (loginWebView.visibility == View.VISIBLE) {
