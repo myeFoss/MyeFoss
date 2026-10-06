@@ -79,6 +79,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbPaletteEmerald: android.widget.RadioButton
     private lateinit var rbPalettePurple: android.widget.RadioButton
     private lateinit var rbPaletteAmber: android.widget.RadioButton
+    private lateinit var switchCourseNotifications: com.google.android.material.materialswitch.MaterialSwitch
 
     // Planning header & calendar views
     private lateinit var btnHeaderTitleWrapper: LinearLayout
@@ -190,6 +191,7 @@ class MainActivity : AppCompatActivity() {
         rbPaletteEmerald = findViewById(R.id.rbPaletteEmerald)
         rbPalettePurple = findViewById(R.id.rbPalettePurple)
         rbPaletteAmber = findViewById(R.id.rbPaletteAmber)
+        switchCourseNotifications = findViewById(R.id.switchCourseNotifications)
 
         btnHeaderTitleWrapper = findViewById(R.id.btnHeaderTitleWrapper)
         tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
@@ -425,6 +427,47 @@ class MainActivity : AppCompatActivity() {
                 recreate()
             }
         }
+
+        // 3. Course Change Notifications
+        val isNotifEnabled = prefs.getBoolean("notify_course_changes", false)
+        switchCourseNotifications.isChecked = isNotifEnabled
+
+        switchCourseNotifications.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("notify_course_changes", isChecked).apply()
+
+            if (isChecked) {
+                // Request POST_NOTIFICATIONS permission on Android 13+ if needed
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+                    }
+                }
+                CourseSyncWorker.createNotificationChannel(this)
+                scheduleCourseSyncWorker()
+                Toast.makeText(this, "Notifications de cours activées", Toast.LENGTH_SHORT).show()
+            } else {
+                androidx.work.WorkManager.getInstance(this).cancelUniqueWork(CourseSyncWorker.WORK_NAME)
+                Toast.makeText(this, "Notifications désactivées", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun scheduleCourseSyncWorker() {
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = androidx.work.PeriodicWorkRequestBuilder<CourseSyncWorker>(
+            15, java.util.concurrent.TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            CourseSyncWorker.WORK_NAME,
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
     }
 
     private lateinit var tvGeneralAverage: TextView
@@ -939,11 +982,13 @@ class MainActivity : AppCompatActivity() {
             if (isSelected) {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = true
+                chipView.alpha = 1.0f
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
             } else if (isToday) {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isActivated = true
+                chipView.alpha = 1.0f
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
             } else if (hasCourses) {
@@ -951,14 +996,17 @@ class MainActivity : AppCompatActivity() {
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
                 chipView.isActivated = false
+                chipView.alpha = 1.0f
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_primary))
             } else {
+                // Journée sans cours : visiblement grisée sans surcharger visuellement
                 chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = false
                 chipView.isActivated = false
-                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSurfaceVariant))
-                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSurface))
+                chipView.alpha = 0.38f
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_outline))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_outline))
             }
 
             chipView.setOnClickListener {
@@ -1045,16 +1093,21 @@ class MainActivity : AppCompatActivity() {
                     if (isSelectedDay) {
                         setBackgroundResource(R.drawable.bg_day_chip)
                         isSelected = true
+                        alpha = 1.0f
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimary))
                     } else if (isToday) {
                         setBackgroundResource(R.drawable.bg_day_chip)
                         isActivated = true
+                        alpha = 1.0f
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimaryContainer))
                     } else if (hasCourses) {
+                        alpha = 1.0f
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_primary))
                         setTypeface(typeface, android.graphics.Typeface.BOLD)
                     } else {
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSurface))
+                        // Journée sans cours : grisée discrètement
+                        alpha = 0.38f
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_outline))
                     }
 
                     setOnClickListener {
