@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.navigation.NavigationView
@@ -38,6 +39,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
+
+    enum class ViewMode { DAY, WEEK, MONTH }
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationDrawer: NavigationView
@@ -58,11 +61,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerScolarity: ScrollView
 
     // Planning views
+    private lateinit var toggleViewMode: MaterialButtonToggleGroup
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var rvAgenda: RecyclerView
-    private lateinit var tvCurrentWeekLabel: TextView
-    private lateinit var btnPrevWeek: MaterialButton
-    private lateinit var btnNextWeek: MaterialButton
+    private lateinit var tvCurrentPeriodLabel: TextView
+    private lateinit var btnPrevPeriod: MaterialButton
+    private lateinit var btnNextPeriod: MaterialButton
 
     // Scolarity views
     private lateinit var cardGrades: MaterialCardView
@@ -74,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var adapter: AgendaAdapter
     private var currentCalendar: Calendar = Calendar.getInstance(Locale.FRANCE)
-    private var lastLoadedSections: List<DaySection> = emptyList()
+    private var currentViewMode: ViewMode = ViewMode.WEEK
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Material You Dynamic Colors (Android 12+)
@@ -107,11 +111,12 @@ class MainActivity : AppCompatActivity() {
         tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
         tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
 
+        toggleViewMode = findViewById(R.id.toggleViewMode)
         swipeRefresh = findViewById(R.id.swipeRefresh)
         rvAgenda = findViewById(R.id.rvAgenda)
-        tvCurrentWeekLabel = findViewById(R.id.tvCurrentWeekLabel)
-        btnPrevWeek = findViewById(R.id.btnPrevWeek)
-        btnNextWeek = findViewById(R.id.btnNextWeek)
+        tvCurrentPeriodLabel = findViewById(R.id.tvCurrentPeriodLabel)
+        btnPrevPeriod = findViewById(R.id.btnPrevPeriod)
+        btnNextPeriod = findViewById(R.id.btnNextPeriod)
 
         cardGrades = findViewById(R.id.cardGrades)
         cardAbsences = findViewById(R.id.cardAbsences)
@@ -182,23 +187,43 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Week navigation
-        btnPrevWeek.setOnClickListener {
-            currentCalendar.add(Calendar.DAY_OF_YEAR, -7)
-            loadAgendaForCurrentWeek()
+        // View Mode Toggle (Jour / Semaine / Mois)
+        toggleViewMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                currentViewMode = when (checkedId) {
+                    R.id.btnModeDay -> ViewMode.DAY
+                    R.id.btnModeMonth -> ViewMode.MONTH
+                    else -> ViewMode.WEEK
+                }
+                loadAgendaForCurrentPeriod()
+            }
         }
 
-        btnNextWeek.setOnClickListener {
-            currentCalendar.add(Calendar.DAY_OF_YEAR, 7)
-            loadAgendaForCurrentWeek()
+        // Period navigation (Previous / Next)
+        btnPrevPeriod.setOnClickListener {
+            when (currentViewMode) {
+                ViewMode.DAY -> currentCalendar.add(Calendar.DAY_OF_YEAR, -1)
+                ViewMode.WEEK -> currentCalendar.add(Calendar.DAY_OF_YEAR, -7)
+                ViewMode.MONTH -> currentCalendar.add(Calendar.MONTH, -1)
+            }
+            loadAgendaForCurrentPeriod()
+        }
+
+        btnNextPeriod.setOnClickListener {
+            when (currentViewMode) {
+                ViewMode.DAY -> currentCalendar.add(Calendar.DAY_OF_YEAR, 1)
+                ViewMode.WEEK -> currentCalendar.add(Calendar.DAY_OF_YEAR, 7)
+                ViewMode.MONTH -> currentCalendar.add(Calendar.MONTH, 1)
+            }
+            loadAgendaForCurrentPeriod()
         }
 
         btnRefresh.setOnClickListener {
-            loadAgendaForCurrentWeek()
+            loadAgendaForCurrentPeriod()
         }
 
         swipeRefresh.setOnRefreshListener {
-            loadAgendaForCurrentWeek(isSwipe = true)
+            loadAgendaForCurrentPeriod(isSwipe = true)
         }
 
         // Scolarity card clicks
@@ -229,7 +254,7 @@ class MainActivity : AppCompatActivity() {
         val cookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
         if (cookies.contains("myefrei.sid")) {
             showScreen(Screen.APP)
-            loadAgendaForCurrentWeek()
+            loadAgendaForCurrentPeriod()
         } else {
             showScreen(Screen.LOGIN)
         }
@@ -263,7 +288,7 @@ class MainActivity : AppCompatActivity() {
                     if (c.contains("myefrei.sid")) {
                         loginWebView.visibility = View.GONE
                         showScreen(Screen.APP)
-                        loadAgendaForCurrentWeek()
+                        loadAgendaForCurrentPeriod()
                         return true
                     }
                 }
@@ -275,25 +300,23 @@ class MainActivity : AppCompatActivity() {
         loginWebView.loadUrl(authUrl)
     }
 
-    private fun loadAgendaForCurrentWeek(isSwipe: Boolean = false) {
-        val (startOfWeek, endOfWeek, weekDays) = getWeekBoundaries(currentCalendar)
-
-        val weekHeaderFormat = SimpleDateFormat("d MMMM yyyy", Locale.FRANCE)
-        tvCurrentWeekLabel.text = "Semaine du ${weekHeaderFormat.format(startOfWeek)}"
+    private fun loadAgendaForCurrentPeriod(isSwipe: Boolean = false) {
+        val (startDate, endDate, periodDays, headerLabel) = getPeriodBoundaries(currentCalendar, currentViewMode)
+        tvCurrentPeriodLabel.text = headerLabel
 
         if (!isSwipe) layoutLoading.visibility = View.VISIBLE
 
         lifecycleScope.launch {
             try {
                 val courses = withContext(Dispatchers.IO) {
-                    fetchPlanningFromApi(startOfWeek, endOfWeek)
+                    fetchPlanningFromApi(startDate, endDate)
                 }
 
                 val cal = Calendar.getInstance(Locale.FRANCE)
                 val todayCal = Calendar.getInstance(Locale.FRANCE)
                 val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
 
-                val daySections = weekDays.map { dayDate ->
+                val daySections = periodDays.map { dayDate ->
                     cal.time = dayDate
                     val dayCourses = courses.filter { course ->
                         course.startDate?.let {
@@ -310,10 +333,9 @@ class MainActivity : AppCompatActivity() {
                     DaySection(dayDate, label, isToday, dayCourses)
                 }
 
-                lastLoadedSections = daySections
                 adapter.submitList(daySections)
 
-                // Scroll to today's section automatically
+                // Scroll to current day or current course
                 val todayIndex = daySections.indexOfFirst { it.isToday }
                 if (todayIndex >= 0) {
                     rvAgenda.post {
@@ -388,35 +410,93 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getWeekBoundaries(referenceCal: Calendar): Triple<Date, Date, List<Date>> {
-        val cal = Calendar.getInstance(Locale.FRANCE).apply {
-            time = referenceCal.time
-            firstDayOfWeek = Calendar.MONDAY
-            val dayOfWeek = get(Calendar.DAY_OF_WEEK)
-            val diff = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
-            add(Calendar.DAY_OF_MONTH, diff)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
+    private data class PeriodResult(
+        val startDate: Date,
+        val endDate: Date,
+        val days: List<Date>,
+        val label: String
+    )
+
+    private fun getPeriodBoundaries(referenceCal: Calendar, mode: ViewMode): PeriodResult {
+        return when (mode) {
+            ViewMode.DAY -> {
+                val cal = Calendar.getInstance(Locale.FRANCE).apply {
+                    time = referenceCal.time
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val start = cal.time
+                val dayList = listOf(start)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                val end = cal.time
+
+                val dayFmt = SimpleDateFormat("EEEE d MMMM yyyy", Locale.FRANCE)
+                val label = dayFmt.format(start).replaceFirstChar { it.uppercase() }
+                PeriodResult(start, end, dayList, label)
+            }
+            ViewMode.WEEK -> {
+                val cal = Calendar.getInstance(Locale.FRANCE).apply {
+                    time = referenceCal.time
+                    firstDayOfWeek = Calendar.MONDAY
+                    val dayOfWeek = get(Calendar.DAY_OF_WEEK)
+                    val diff = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
+                    add(Calendar.DAY_OF_MONTH, diff)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val weekDays = mutableListOf<Date>()
+                val start = cal.time
+                for (i in 0 until 7) {
+                    weekDays.add(cal.time)
+                    cal.add(Calendar.DAY_OF_MONTH, 1)
+                }
+                cal.add(Calendar.DAY_OF_MONTH, -1)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                val end = cal.time
+
+                val weekHeaderFormat = SimpleDateFormat("d MMMM yyyy", Locale.FRANCE)
+                val label = "Semaine du ${weekHeaderFormat.format(start)}"
+                PeriodResult(start, end, weekDays, label)
+            }
+            ViewMode.MONTH -> {
+                val cal = Calendar.getInstance(Locale.FRANCE).apply {
+                    time = referenceCal.time
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val start = cal.time
+                val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val monthDays = mutableListOf<Date>()
+                for (i in 1..maxDay) {
+                    monthDays.add(cal.time)
+                    cal.add(Calendar.DAY_OF_MONTH, 1)
+                }
+                cal.add(Calendar.DAY_OF_MONTH, -1)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                val end = cal.time
+
+                val monthFmt = SimpleDateFormat("MMMM yyyy", Locale.FRANCE)
+                val label = monthFmt.format(start).replaceFirstChar { it.uppercase() }
+                PeriodResult(start, end, monthDays, label)
+            }
         }
-
-        val weekDays = mutableListOf<Date>()
-        val start = cal.time
-
-        for (i in 0 until 7) {
-            weekDays.add(cal.time)
-            cal.add(Calendar.DAY_OF_MONTH, 1)
-        }
-
-        cal.add(Calendar.DAY_OF_MONTH, -1)
-        cal.set(Calendar.HOUR_OF_DAY, 23)
-        cal.set(Calendar.MINUTE, 59)
-        cal.set(Calendar.SECOND, 59)
-        cal.set(Calendar.MILLISECOND, 999)
-        val end = cal.time
-
-        return Triple(start, end, weekDays)
     }
 
     private fun logout() {

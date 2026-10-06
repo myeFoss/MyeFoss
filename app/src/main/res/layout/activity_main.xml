@@ -100,13 +100,61 @@
                     android:layout_height="match_parent"
                     android:orientation="vertical">
 
-                    <!-- Week Navigator Pill -->
-                    <com.google.android.material.card.MaterialCardView
+                    <!-- View Mode Toggle: Jour / Semaine / Mois -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleViewMode"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
                         android:layout_marginTop="4dp"
+                        android:layout_marginBottom="4dp"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:checkedButton="@id/btnModeWeek">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnModeDay"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="Jour"
+                            android:textSize="12sp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnModeWeek"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="Semaine"
+                            android:textSize="12sp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnModeMonth"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="Mois"
+                            android:textSize="12sp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <!-- Navigator Pill (Jour / Semaine / Mois) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginTop="2dp"
                         android:layout_marginBottom="8dp"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
@@ -123,7 +171,7 @@
                             android:paddingBottom="2dp">
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnPrevWeek"
+                                android:id="@+id/btnPrevPeriod"
                                 style="@style/Widget.Material3.Button.IconButton"
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
@@ -131,7 +179,7 @@
                                 app:iconTint="?attr/colorOnSecondaryContainer" />
 
                             <TextView
-                                android:id="@+id/tvCurrentWeekLabel"
+                                android:id="@+id/tvCurrentPeriodLabel"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
@@ -142,7 +190,7 @@
                                 android:text="Semaine du 5 octobre 2026" />
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNextWeek"
+                                android:id="@+id/btnNextPeriod"
                                 style="@style/Widget.Material3.Button.IconButton"
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
