@@ -1,203 +1,347 @@
 package fr.myefrei.agenda
 
 import android.annotation.SuppressLint
-import android.net.Uri
+import android.content.Context
 import android.os.Bundle
+import android.view.View
+import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.color.DynamicColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var webView: WebView
+    private lateinit var layoutAppScreen: LinearLayout
+    private lateinit var layoutLoginScreen: LinearLayout
+    private lateinit var layoutLoading: FrameLayout
+    private lateinit var loginWebView: WebView
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var rvAgenda: RecyclerView
+    private lateinit var tvCurrentWeekLabel: TextView
+    private lateinit var tvStudentSubtitle: TextView
+    private lateinit var btnPrevWeek: MaterialButton
+    private lateinit var btnNextWeek: MaterialButton
+    private lateinit var btnRefresh: MaterialButton
+    private lateinit var btnLogout: MaterialButton
+    private lateinit var btnLogin: MaterialButton
+
+    private lateinit var adapter: AgendaAdapter
+    private var currentCalendar: Calendar = Calendar.getInstance(Locale.FRANCE)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply Material You Dynamic Colors (Android 12+)
+        DynamicColors.applyToActivityIfAvailable(this)
+
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        initViews()
+        setupListeners()
+        setupRecyclerView()
+
+        checkSessionAndLoad()
+    }
+
+    private fun initViews() {
+        layoutAppScreen = findViewById(R.id.layoutAppScreen)
+        layoutLoginScreen = findViewById(R.id.layoutLoginScreen)
+        layoutLoading = findViewById(R.id.layoutLoading)
+        loginWebView = findViewById(R.id.loginWebView)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+        rvAgenda = findViewById(R.id.rvAgenda)
+        tvCurrentWeekLabel = findViewById(R.id.tvCurrentWeekLabel)
+        tvStudentSubtitle = findViewById(R.id.tvStudentSubtitle)
+        btnPrevWeek = findViewById(R.id.btnPrevWeek)
+        btnNextWeek = findViewById(R.id.btnNextWeek)
+        btnRefresh = findViewById(R.id.btnRefresh)
+        btnLogout = findViewById(R.id.btnLogout)
+        btnLogin = findViewById(R.id.btnLogin)
+    }
+
+    private fun setupListeners() {
+        btnPrevWeek.setOnClickListener {
+            currentCalendar.add(Calendar.DAY_OF_YEAR, -7)
+            loadAgendaForCurrentWeek()
+        }
+
+        btnNextWeek.setOnClickListener {
+            currentCalendar.add(Calendar.DAY_OF_YEAR, 7)
+            loadAgendaForCurrentWeek()
+        }
+
+        btnRefresh.setOnClickListener {
+            loadAgendaForCurrentWeek()
+        }
+
+        swipeRefresh.setOnRefreshListener {
+            loadAgendaForCurrentWeek(isSwipe = true)
+        }
+
+        btnLogin.setOnClickListener {
+            startWebSsoLogin()
+        }
+
+        btnLogout.setOnClickListener {
+            logout()
+        }
+    }
+
+    private fun setupRecyclerView() {
+        adapter = AgendaAdapter()
+        rvAgenda.layoutManager = LinearLayoutManager(this)
+        rvAgenda.adapter = adapter
+    }
+
+    private fun checkSessionAndLoad() {
+        val cookieManager = CookieManager.getInstance()
+        val cookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        if (cookies.contains("myefrei.sid")) {
+            showScreen(Screen.APP)
+            loadAgendaForCurrentWeek()
+        } else {
+            showScreen(Screen.LOGIN)
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        webView = WebView(this)
-        setContentView(webView)
-
-        // Enable cookies and third-party cookies
-        val cookieManager = android.webkit.CookieManager.getInstance()
+    private fun startWebSsoLogin() {
+        showScreen(Screen.WEBVIEW)
+        val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(webView, true)
+        cookieManager.setAcceptThirdPartyCookies(loginWebView, true)
 
-        webView.settings.apply {
+        loginWebView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
-            allowFileAccess = true
-            allowContentAccess = true
-            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            
-            // Spoof standard Chrome Mobile User Agent to bypass Keycloak/SSO webview blocks
             userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-            
-            // Enable CORS for local file:/// assets fetching remote APIs
-            allowUniversalAccessFromFileURLs = true
-            allowFileAccessFromFileURLs = true
         }
 
-        webView.webViewClient = object : WebViewClient() {
+        loginWebView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
 
-                // Intercept the Web SSO gateway redirect once authenticated on myefrei.fr
-                if (url.startsWith("https://www.myefrei.fr/home") || 
+                if (url.startsWith("https://www.myefrei.fr/home") ||
                     url.startsWith("https://www.myefrei.fr/dashboard") ||
-                    url.startsWith("https://www.myefrei.fr/planning") ||
-                    (url.startsWith("https://www.myefrei.fr") && url.contains("logged_in=1"))) {
-                    android.util.Log.e("WebViewConsole", "Web login succeeded! Redirecting to index.html with web session")
-                    webView.loadUrl("file:///android_asset/index.html?web_auth=1")
-                    return true
-                }
+                    url.startsWith("https://www.myefrei.fr/portal") ||
+                    url == "https://www.myefrei.fr/" || url == "https://www.myefrei.fr") {
 
-                // If redirected to root of myefrei after SSO callback
-                if (url == "https://www.myefrei.fr/" || url == "https://www.myefrei.fr") {
-                    val cookieManager = android.webkit.CookieManager.getInstance()
-                    val cookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
-                    if (cookies.contains("myefrei.sid")) {
-                        android.util.Log.e("WebViewConsole", "myefrei.sid cookie detected after login! Loading index.html")
-                        webView.loadUrl("file:///android_asset/index.html?web_auth=1")
+                    val cm = CookieManager.getInstance()
+                    val c = cm.getCookie("https://www.myefrei.fr") ?: ""
+                    if (c.contains("myefrei.sid")) {
+                        loginWebView.visibility = View.GONE
+                        showScreen(Screen.APP)
+                        loadAgendaForCurrentWeek()
                         return true
                     }
                 }
-
-                // Let all other URLs (Keycloak SSO login page, Microsoft AD, etc.) load in WebView
                 return false
             }
         }
 
-        webView.webChromeClient = object : android.webkit.WebChromeClient() {
-            override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
-                if (consoleMessage != null) {
-                    android.util.Log.e("WebViewConsole", "${consoleMessage.message()} -- From line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}")
+        val authUrl = "https://www.myefrei.fr/auth/efrei?redirectPath=" + URLEncoder.encode("portal/student/planning", "UTF-8")
+        loginWebView.loadUrl(authUrl)
+    }
+
+    private fun loadAgendaForCurrentWeek(isSwipe: Boolean = false) {
+        val (startOfWeek, endOfWeek, weekDays) = getWeekBoundaries(currentCalendar)
+
+        val weekHeaderFormat = SimpleDateFormat("d MMMM yyyy", Locale.FRANCE)
+        tvCurrentWeekLabel.text = "Semaine du ${weekHeaderFormat.format(startOfWeek)}"
+
+        if (!isSwipe) layoutLoading.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            try {
+                val courses = withContext(Dispatchers.IO) {
+                    fetchPlanningFromApi(startOfWeek, endOfWeek)
                 }
-                return true
+
+                // Group courses by day
+                val cal = Calendar.getInstance(Locale.FRANCE)
+                val todayCal = Calendar.getInstance(Locale.FRANCE)
+                val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
+
+                val daySections = weekDays.map { dayDate ->
+                    cal.time = dayDate
+                    val dayCourses = courses.filter { course ->
+                        course.startDate?.let {
+                            val cCal = Calendar.getInstance(Locale.FRANCE).apply { time = it }
+                            cCal.get(Calendar.YEAR) == cal.get(Calendar.YEAR) &&
+                                    cCal.get(Calendar.DAY_OF_YEAR) == cal.get(Calendar.DAY_OF_YEAR)
+                        } ?: false
+                    }.sortedBy { it.startDate ?: Date(0) }
+
+                    val isToday = cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                            cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+
+                    val label = dayLabelFormat.format(dayDate).replaceFirstChar { it.uppercase() }
+                    DaySection(dayDate, label, isToday, dayCourses)
+                }
+
+                adapter.submitList(daySections)
+
+            } catch (e: Exception) {
+                if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
+                    Toast.makeText(this@MainActivity, "Session expirée, veuillez vous reconnecter", Toast.LENGTH_SHORT).show()
+                    logout()
+                } else {
+                    Toast.makeText(this@MainActivity, "Erreur de chargement: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                layoutLoading.visibility = View.GONE
+                swipeRefresh.isRefreshing = false
+            }
+        }
+    }
+
+    private fun fetchPlanningFromApi(startDate: Date, endDate: Date): List<CourseEvent> {
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startStr = URLEncoder.encode(isoFormat.format(startDate), "UTF-8")
+        val endStr = URLEncoder.encode(isoFormat.format(endDate), "UTF-8")
+        val urlStr = "https://www.myefrei.fr/api/rest/student/planning?startDate=$startStr&endDate=$endStr"
+
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie(urlStr) ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 15000
+            readTimeout = 15000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            if (mergedCookies.isNotBlank()) {
+                setRequestProperty("Cookie", mergedCookies)
             }
         }
 
-        webView.addJavascriptInterface(WebAppInterface(), "Android")
+        val code = conn.responseCode
+        if (code in 200..299) {
+            val response = conn.inputStream.bufferedReader().use { it.readText() }
+            val jsonArray = JSONArray(response)
+            val list = mutableListOf<CourseEvent>()
+            for (i in 0 until jsonArray.length()) {
+                list.add(CourseEvent.fromJson(jsonArray.getJSONObject(i)))
+            }
+            return list
+        } else {
+            val error = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+            throw Exception("HTTP $code: $error")
+        }
+    }
 
-        webView.loadUrl("file:///android_asset/index.html")
+    private fun getWeekBoundaries(referenceCal: Calendar): Triple<Date, Date, List<Date>> {
+        val cal = Calendar.getInstance(Locale.FRANCE).apply {
+            time = referenceCal.time
+            firstDayOfWeek = Calendar.MONDAY
+            val dayOfWeek = get(Calendar.DAY_OF_WEEK)
+            val diff = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
+            add(Calendar.DAY_OF_MONTH, diff)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val weekDays = mutableListOf<Date>()
+        val start = cal.time
+
+        for (i in 0 until 7) {
+            weekDays.add(cal.time)
+            cal.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        cal.add(Calendar.DAY_OF_MONTH, -1)
+        cal.set(Calendar.HOUR_OF_DAY, 23)
+        cal.set(Calendar.MINUTE, 59)
+        cal.set(Calendar.SECOND, 59)
+        cal.set(Calendar.MILLISECOND, 999)
+        val end = cal.time
+
+        return Triple(start, end, weekDays)
+    }
+
+    private fun logout() {
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+        adapter.submitList(emptyList())
+        showScreen(Screen.LOGIN)
+    }
+
+    private fun showScreen(screen: Screen) {
+        when (screen) {
+            Screen.APP -> {
+                layoutAppScreen.visibility = View.VISIBLE
+                layoutLoginScreen.visibility = View.GONE
+                loginWebView.visibility = View.GONE
+            }
+            Screen.LOGIN -> {
+                layoutAppScreen.visibility = View.GONE
+                layoutLoginScreen.visibility = View.VISIBLE
+                loginWebView.visibility = View.GONE
+            }
+            Screen.WEBVIEW -> {
+                layoutAppScreen.visibility = View.GONE
+                layoutLoginScreen.visibility = View.GONE
+                loginWebView.visibility = View.VISIBLE
+            }
+        }
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
+        if (loginWebView.visibility == View.VISIBLE) {
+            if (loginWebView.canGoBack()) {
+                loginWebView.goBack()
+            } else {
+                showScreen(Screen.LOGIN)
+            }
         } else {
             super.onBackPressed()
         }
     }
 
-    inner class WebAppInterface {
-
-        // Merge cookies from both Efrei domains so auth.sid (Keycloak) is sent alongside myefrei.sid
-        private fun getCookiesForUrl(urlStr: String): String? {
-            val cookieManager = android.webkit.CookieManager.getInstance()
-            val directCookies = cookieManager.getCookie(urlStr) ?: ""
-            val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
-            val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
-
-            // Merge all cookie strings, deduplicating by key
-            val cookieMap = mutableMapOf<String, String>()
-            for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
-                if (cookieStr.isNotBlank()) {
-                    cookieStr.split(";").forEach { part ->
-                        val trimmed = part.trim()
-                        val eqIdx = trimmed.indexOf('=')
-                        if (eqIdx > 0) {
-                            val key = trimmed.substring(0, eqIdx).trim()
-                            cookieMap[key] = trimmed
-                        }
-                    }
-                }
-            }
-
-            val merged = cookieMap.values.joinToString("; ")
-            android.util.Log.e("WebViewConsole", "Merged cookies for $urlStr: $merged")
-            return merged.ifBlank { null }
-        }
-
-        // Authenticated GET request forwarding session cookies from WebView CookieManager
-        @android.webkit.JavascriptInterface
-        fun getSecure(urlStr: String): String {
-            return try {
-                val url = java.net.URL(urlStr)
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.requestMethod = "GET"
-                conn.connectTimeout = 15000
-                conn.readTimeout = 15000
-                conn.setRequestProperty("Accept", "application/json")
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-
-                val cookies = getCookiesForUrl(urlStr)
-                if (!cookies.isNullOrEmpty()) {
-                    conn.setRequestProperty("Cookie", cookies)
-                    android.util.Log.e("WebViewConsole", "getSecure forwarding cookies for $urlStr: $cookies")
-                } else {
-                    android.util.Log.e("WebViewConsole", "getSecure: no cookies found for $urlStr")
-                }
-
-                val status = conn.responseCode
-                val stream = if (status >= 400) conn.errorStream else conn.inputStream
-                val responseText = stream?.bufferedReader()?.use { it.readText() } ?: ""
-
-                android.util.Log.e("WebViewConsole", "getSecure $urlStr -> $status")
-
-                org.json.JSONObject().apply {
-                    put("status", status)
-                    put("body", responseText)
-                }.toString()
-            } catch (e: Exception) {
-                android.util.Log.e("WebViewConsole", "getSecure error: ${e.message}")
-                org.json.JSONObject().apply {
-                    put("status", 500)
-                    put("error", e.message)
-                }.toString()
-            }
-        }
-
-        // Authenticated POST request forwarding session cookies from WebView CookieManager
-        @android.webkit.JavascriptInterface
-        fun postSecure(urlStr: String, contentType: String, bodyStr: String): String {
-            return try {
-                val url = java.net.URL(urlStr)
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.connectTimeout = 10000
-                conn.readTimeout = 10000
-                conn.setRequestProperty("Content-Type", contentType)
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-
-                val cookies = getCookiesForUrl(urlStr)
-                if (!cookies.isNullOrEmpty()) {
-                    conn.setRequestProperty("Cookie", cookies)
-                    android.util.Log.e("WebViewConsole", "postSecure forwarding cookies: $cookies")
-                }
-
-                conn.outputStream.use { os ->
-                    val input = bodyStr.toByteArray(Charsets.UTF_8)
-                    os.write(input, 0, input.size)
-                }
-
-                val status = conn.responseCode
-                val stream = if (status >= 400) conn.errorStream else conn.inputStream
-                val responseText = stream?.bufferedReader()?.use { it.readText() } ?: ""
-
-                org.json.JSONObject().apply {
-                    put("status", status)
-                    put("body", responseText)
-                }.toString()
-            } catch (e: Exception) {
-                org.json.JSONObject().apply {
-                    put("status", 500)
-                    put("error", e.message)
-                }.toString()
-            }
-        }
+    enum class Screen {
+        APP, LOGIN, WEBVIEW
     }
 }
