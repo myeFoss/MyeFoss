@@ -23,6 +23,7 @@ data class CourseLocation(
 data class CourseEvent(
     val id: String,
     val name: String,
+    val module: String?,
     val startTime: String?,
     val endTime: String?,
     val startDate: Date?,
@@ -74,6 +75,7 @@ data class CourseEvent(
             return CourseEvent(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 name = json.optString("name", "Cours"),
+                module = json.optString("module").takeIf { it.isNotBlank() },
                 startTime = json.optString("startTime").takeIf { it.isNotBlank() },
                 endTime = json.optString("endTime").takeIf { it.isNotBlank() },
                 startDate = parseIso(json.optString("start")),

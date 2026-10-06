@@ -1,7 +1,6 @@
 package fr.myefrei.agenda
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
@@ -10,15 +9,21 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,25 +39,45 @@ import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navigationDrawer: NavigationView
+    private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var layoutAppScreen: LinearLayout
     private lateinit var layoutLoginScreen: LinearLayout
     private lateinit var layoutLoading: FrameLayout
     private lateinit var loginWebView: WebView
+
+    // Toolbar views
+    private lateinit var btnMenuDrawer: MaterialButton
+    private lateinit var tvToolbarTitle: TextView
+    private lateinit var tvStudentSubtitle: TextView
+    private lateinit var btnRefresh: MaterialButton
+
+    // Tab containers
+    private lateinit var tabContainerPlanning: LinearLayout
+    private lateinit var tabContainerScolarity: ScrollView
+
+    // Planning views
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var rvAgenda: RecyclerView
     private lateinit var tvCurrentWeekLabel: TextView
-    private lateinit var tvStudentSubtitle: TextView
     private lateinit var btnPrevWeek: MaterialButton
     private lateinit var btnNextWeek: MaterialButton
-    private lateinit var btnRefresh: MaterialButton
-    private lateinit var btnLogout: MaterialButton
+
+    // Scolarity views
+    private lateinit var cardGrades: MaterialCardView
+    private lateinit var cardAbsences: MaterialCardView
+    private lateinit var cardLxp: MaterialCardView
+
+    // Login
     private lateinit var btnLogin: MaterialButton
 
     private lateinit var adapter: AgendaAdapter
     private var currentCalendar: Calendar = Calendar.getInstance(Locale.FRANCE)
+    private var lastLoadedSections: List<DaySection> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply Material You Dynamic Colors (Android 12+)
+        // Material You Dynamic Colors (Android 12+)
         DynamicColors.applyToActivityIfAvailable(this)
 
         super.onCreate(savedInstanceState)
@@ -66,22 +91,98 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        drawerLayout = findViewById(R.id.drawerLayout)
+        navigationDrawer = findViewById(R.id.navigationDrawer)
+        bottomNavigation = findViewById(R.id.bottomNavigation)
         layoutAppScreen = findViewById(R.id.layoutAppScreen)
         layoutLoginScreen = findViewById(R.id.layoutLoginScreen)
         layoutLoading = findViewById(R.id.layoutLoading)
         loginWebView = findViewById(R.id.loginWebView)
+
+        btnMenuDrawer = findViewById(R.id.btnMenuDrawer)
+        tvToolbarTitle = findViewById(R.id.tvToolbarTitle)
+        tvStudentSubtitle = findViewById(R.id.tvStudentSubtitle)
+        btnRefresh = findViewById(R.id.btnRefresh)
+
+        tabContainerPlanning = findViewById(R.id.tabContainerPlanning)
+        tabContainerScolarity = findViewById(R.id.tabContainerScolarity)
+
         swipeRefresh = findViewById(R.id.swipeRefresh)
         rvAgenda = findViewById(R.id.rvAgenda)
         tvCurrentWeekLabel = findViewById(R.id.tvCurrentWeekLabel)
-        tvStudentSubtitle = findViewById(R.id.tvStudentSubtitle)
         btnPrevWeek = findViewById(R.id.btnPrevWeek)
         btnNextWeek = findViewById(R.id.btnNextWeek)
-        btnRefresh = findViewById(R.id.btnRefresh)
-        btnLogout = findViewById(R.id.btnLogout)
+
+        cardGrades = findViewById(R.id.cardGrades)
+        cardAbsences = findViewById(R.id.cardAbsences)
+        cardLxp = findViewById(R.id.cardLxp)
+
         btnLogin = findViewById(R.id.btnLogin)
     }
 
     private fun setupListeners() {
+        // Drawer toggle
+        btnMenuDrawer.setOnClickListener {
+            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START)
+            } else {
+                drawerLayout.openDrawer(GravityCompat.START)
+            }
+        }
+
+        // Drawer navigation items
+        navigationDrawer.setNavigationItemSelectedListener { item ->
+            drawerLayout.closeDrawer(GravityCompat.START)
+            when (item.itemId) {
+                R.id.drawer_planning -> {
+                    bottomNavigation.selectedItemId = R.id.nav_planning
+                    true
+                }
+                R.id.drawer_grades -> {
+                    bottomNavigation.selectedItemId = R.id.nav_scolarity
+                    showScolarityFeature("Notes & Résultats")
+                    true
+                }
+                R.id.drawer_absences -> {
+                    bottomNavigation.selectedItemId = R.id.nav_scolarity
+                    showScolarityFeature("Absences")
+                    true
+                }
+                R.id.drawer_lxp -> {
+                    bottomNavigation.selectedItemId = R.id.nav_scolarity
+                    showScolarityFeature("LXP / E-learning")
+                    true
+                }
+                R.id.drawer_logout -> {
+                    logout()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // Bottom Navigation Bar tabs
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_planning -> {
+                    tabContainerPlanning.visibility = View.VISIBLE
+                    tabContainerScolarity.visibility = View.GONE
+                    tvToolbarTitle.text = "Planning"
+                    btnRefresh.visibility = View.VISIBLE
+                    true
+                }
+                R.id.nav_scolarity -> {
+                    tabContainerPlanning.visibility = View.GONE
+                    tabContainerScolarity.visibility = View.VISIBLE
+                    tvToolbarTitle.text = "Scolarité"
+                    btnRefresh.visibility = View.GONE
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // Week navigation
         btnPrevWeek.setOnClickListener {
             currentCalendar.add(Calendar.DAY_OF_YEAR, -7)
             loadAgendaForCurrentWeek()
@@ -100,17 +201,25 @@ class MainActivity : AppCompatActivity() {
             loadAgendaForCurrentWeek(isSwipe = true)
         }
 
+        // Scolarity card clicks
+        cardGrades.setOnClickListener { showScolarityFeature("Notes & Résultats") }
+        cardAbsences.setOnClickListener { showScolarityFeature("Suivi des Absences") }
+        cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
+
         btnLogin.setOnClickListener {
             startWebSsoLogin()
         }
+    }
 
-        btnLogout.setOnClickListener {
-            logout()
-        }
+    private fun showScolarityFeature(title: String) {
+        Toast.makeText(this, "$title sera bientôt disponible !", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupRecyclerView() {
-        adapter = AgendaAdapter()
+        adapter = AgendaAdapter { clickedCourse ->
+            val sheet = CourseDetailsBottomSheet.newInstance(clickedCourse)
+            sheet.show(supportFragmentManager, "course_details")
+        }
         rvAgenda.layoutManager = LinearLayoutManager(this)
         rvAgenda.adapter = adapter
     }
@@ -180,7 +289,6 @@ class MainActivity : AppCompatActivity() {
                     fetchPlanningFromApi(startOfWeek, endOfWeek)
                 }
 
-                // Group courses by day
                 val cal = Calendar.getInstance(Locale.FRANCE)
                 val todayCal = Calendar.getInstance(Locale.FRANCE)
                 val dayLabelFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
@@ -202,7 +310,16 @@ class MainActivity : AppCompatActivity() {
                     DaySection(dayDate, label, isToday, dayCourses)
                 }
 
+                lastLoadedSections = daySections
                 adapter.submitList(daySections)
+
+                // Scroll to today's section automatically
+                val todayIndex = daySections.indexOfFirst { it.isToday }
+                if (todayIndex >= 0) {
+                    rvAgenda.post {
+                        (rvAgenda.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(todayIndex, 0)
+                    }
+                }
 
             } catch (e: Exception) {
                 if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
@@ -330,6 +447,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            return
+        }
         if (loginWebView.visibility == View.VISIBLE) {
             if (loginWebView.canGoBack()) {
                 loginWebView.goBack()

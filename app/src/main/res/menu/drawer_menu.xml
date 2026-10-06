@@ -1,0 +1,29 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/drawer_planning"
+            android:icon="@drawable/ic_calendar"
+            android:title="Planning" />
+        <item
+            android:id="@+id/drawer_grades"
+            android:icon="@drawable/ic_school"
+            android:title="Notes &amp; Résultats" />
+        <item
+            android:id="@+id/drawer_absences"
+            android:icon="@drawable/ic_badge"
+            android:title="Absences" />
+        <item
+            android:id="@+id/drawer_lxp"
+            android:icon="@drawable/ic_book"
+            android:title="LXP / E-learning" />
+    </group>
+
+    <item android:title="Compte">
+        <menu>
+            <item
+                android:id="@+id/drawer_logout"
+                android:icon="@drawable/ic_logout"
+                android:title="Se déconnecter" />
+        </menu>
+    </item>
+</menu>

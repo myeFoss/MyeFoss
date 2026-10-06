@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_planning"
+        android:icon="@drawable/ic_calendar"
+        android:title="Planning" />
+    <item
+        android:id="@+id/nav_scolarity"
+        android:icon="@drawable/ic_school"
+        android:title="Scolarité" />
+</menu>

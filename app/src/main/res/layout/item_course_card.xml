@@ -4,8 +4,11 @@
     android:id="@+id/cardCourse"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="20dp"
+    android:layout_marginBottom="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeWidth="1dp"
     app:strokeColor="?attr/colorOutlineVariant"
@@ -15,9 +18,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
 
-        <!-- Top Row: Time Range + Course Activity Badge -->
+        <!-- Top Header: Heure + Badge Compact -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -31,7 +37,7 @@
                 android:layout_weight="1"
                 android:fontFamily="sans-serif-bold"
                 android:textColor="?attr/colorPrimary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:text="09h10 - 12h40" />
 
             <TextView
@@ -39,56 +45,31 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/badge_normal_bg"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
                 android:text="Cours TD"
                 android:textColor="@color/badge_normal_text"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
 
-        <!-- Course Title -->
+        <!-- Titre du cours -->
         <TextView
             android:id="@+id/tvCourseName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:fontFamily="sans-serif-medium"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
-            android:lineSpacingExtra="2dp"
-            android:text="Cloud Computing : Préparation Certification AZ-104" />
+            android:textSize="15sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Cloud Computing : AZ-104" />
 
-        <!-- Details Row: Room / Building -->
+        <!-- Subtitle compact : Salle & Intervenant -->
         <LinearLayout
-            android:id="@+id/layoutLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_location"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <TextView
-                android:id="@+id/tvCourseLocation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="13sp"
-                android:text="Bordeaux - Salle 223" />
-        </LinearLayout>
-
-        <!-- Details Row: Teacher -->
-        <LinearLayout
-            android:id="@+id/layoutTeacher"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
@@ -96,19 +77,41 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_location"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <TextView
+                android:id="@+id/tvCourseLocation"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:text="Salle 223 (BDX)" />
+
+            <ImageView
+                android:id="@+id/ivTeacherIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="8dp"
                 android:src="@drawable/ic_person"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tvCourseTeacher"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="4dp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="13sp"
-                android:text="SAINTE CROIX Luca" />
+                android:textSize="12sp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:text="SAINTE CROIX L." />
         </LinearLayout>
 
     </LinearLayout>

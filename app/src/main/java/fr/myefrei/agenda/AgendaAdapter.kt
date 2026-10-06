@@ -13,7 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
 class AgendaAdapter(
-    private var daySections: List<DaySection> = emptyList()
+    private var daySections: List<DaySection> = emptyList(),
+    private val onCourseClick: ((CourseEvent) -> Unit)? = null
 ) : RecyclerView.Adapter<AgendaAdapter.DayViewHolder>() {
 
     fun submitList(newList: List<DaySection>) {
@@ -23,7 +24,7 @@ class AgendaAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DayViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_day_section, parent, false)
-        return DayViewHolder(view)
+        return DayViewHolder(view, onCourseClick)
     }
 
     override fun onBindViewHolder(holder: DayViewHolder, position: Int) {
@@ -32,7 +33,10 @@ class AgendaAdapter(
 
     override fun getItemCount(): Int = daySections.size
 
-    class DayViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class DayViewHolder(
+        itemView: View,
+        private val onCourseClick: ((CourseEvent) -> Unit)?
+    ) : RecyclerView.ViewHolder(itemView) {
         private val tvDayHeader: TextView = itemView.findViewById(R.id.tvDayHeader)
         private val viewTodayDot: View = itemView.findViewById(R.id.viewTodayDot)
         private val tvTodayBadge: TextView = itemView.findViewById(R.id.tvTodayBadge)
@@ -60,8 +64,7 @@ class AgendaAdapter(
                     val tvCourseName: TextView = cardView.findViewById(R.id.tvCourseName)
                     val tvCourseLocation: TextView = cardView.findViewById(R.id.tvCourseLocation)
                     val tvCourseTeacher: TextView = cardView.findViewById(R.id.tvCourseTeacher)
-                    val layoutLocation: LinearLayout = cardView.findViewById(R.id.layoutLocation)
-                    val layoutTeacher: LinearLayout = cardView.findViewById(R.id.layoutTeacher)
+                    val ivTeacherIcon: ImageView? = cardView.findViewById(R.id.ivTeacherIcon)
 
                     // Format Time
                     val timeStr = when {
@@ -126,9 +129,16 @@ class AgendaAdapter(
                     // Teacher
                     if (course.teachers.isNotEmpty()) {
                         tvCourseTeacher.text = course.teachers.joinToString(", ")
-                        layoutTeacher.visibility = View.VISIBLE
+                        tvCourseTeacher.visibility = View.VISIBLE
+                        ivTeacherIcon?.visibility = View.VISIBLE
                     } else {
-                        layoutTeacher.visibility = View.GONE
+                        tvCourseTeacher.visibility = View.GONE
+                        ivTeacherIcon?.visibility = View.GONE
+                    }
+
+                    // Click listener to show course details
+                    cardView.setOnClickListener {
+                        onCourseClick?.invoke(course)
                     }
 
                     layoutCoursesContainer.addView(cardView)
