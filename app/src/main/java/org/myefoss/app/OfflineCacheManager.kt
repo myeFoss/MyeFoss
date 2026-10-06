@@ -7,7 +7,7 @@ import java.io.File
 
 object OfflineCacheManager {
 
-    private const val CACHE_FILE_NAME = "efrei_planning_cache.json"
+    private const val CACHE_FILE_NAME = "myefoss_planning_cache.json"
 
     fun saveCourses(context: Context, newCourses: List<CourseEvent>) {
         try {
@@ -82,7 +82,7 @@ object OfflineCacheManager {
         }
     }
 
-    private const val GRADES_CACHE_PREFIX = "efrei_grades_cache_"
+    private const val GRADES_CACHE_PREFIX = "myefoss_grades_cache_"
 
     fun saveGrades(context: Context, grades: List<StudentGrade>, schoolYear: String) {
         try {

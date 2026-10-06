@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
     private var isYearSpinnerInitialized: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("myefoss_prefs", MODE_PRIVATE)
         val savedThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         val savedPalette = prefs.getString("theme_palette", "default") ?: "default"
 
@@ -123,10 +123,10 @@ class MainActivity : AppCompatActivity() {
 
         // Apply selected palette theme
         when (savedPalette) {
-            "emerald" -> setTheme(R.style.Theme_EfreiAgenda_Emerald)
-            "purple" -> setTheme(R.style.Theme_EfreiAgenda_Purple)
-            "amber" -> setTheme(R.style.Theme_EfreiAgenda_Amber)
-            else -> setTheme(R.style.Theme_EfreiAgenda)
+            "emerald" -> setTheme(R.style.Theme_MyeFoss_Emerald)
+            "purple" -> setTheme(R.style.Theme_MyeFoss_Purple)
+            "amber" -> setTheme(R.style.Theme_MyeFoss_Amber)
+            else -> setTheme(R.style.Theme_MyeFoss)
         }
 
         super.onCreate(savedInstanceState)
@@ -322,49 +322,56 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPlanningTab() {
-        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "planning").apply()
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "planning").apply()
         tabContainerPlanning.visibility = View.VISIBLE
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tvToolbarTitle.text = "Planning"
         btnRefresh.visibility = View.VISIBLE
+        bottomNavigation.menu.findItem(R.id.nav_planning)?.isChecked = true
+        navigationDrawer.setCheckedItem(R.id.drawer_planning)
     }
 
     private fun showScolarityTab() {
-        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "scolarity").apply()
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "scolarity").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.VISIBLE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tvToolbarTitle.text = "Scolarité"
         btnRefresh.visibility = View.GONE
+        bottomNavigation.menu.findItem(R.id.nav_scolarity)?.isChecked = true
+        // Clear drawer check or leave unselected for sub-items
+        navigationDrawer.checkedItem?.isChecked = false
     }
 
     private fun openSettingsScreen() {
-        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "settings").apply()
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "settings").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerSettings.visibility = View.VISIBLE
         tvToolbarTitle.text = "Paramètres"
         btnRefresh.visibility = View.GONE
+        navigationDrawer.setCheckedItem(R.id.drawer_settings)
     }
 
     private fun openGradesScreen() {
-        getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "grades").apply()
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "grades").apply()
         tabContainerPlanning.visibility = View.GONE
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.VISIBLE
         tvToolbarTitle.text = "Notes & Résultats"
         btnRefresh.visibility = View.GONE
+        navigationDrawer.setCheckedItem(R.id.drawer_grades)
 
         loadStudentGrades()
     }
 
     private fun setupThemeSettings() {
-        val prefs = getSharedPreferences("efrei_agenda_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("myefoss_prefs", MODE_PRIVATE)
         val currentThemeMode = prefs.getInt("theme_mode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         val currentPalette = prefs.getString("theme_palette", "default") ?: "default"
 

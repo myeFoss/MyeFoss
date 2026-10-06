@@ -9,7 +9,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EfreiAgenda">
+        android:theme="@style/Theme.MyeFoss">
         <activity
             android:name=".MainActivity"
             android:exported="true">

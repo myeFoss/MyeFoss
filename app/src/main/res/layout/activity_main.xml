@@ -75,7 +75,7 @@
                                 android:id="@+id/tvStudentSubtitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Efrei Paris"
+                                android:text="MyeFoss"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:textSize="11sp" />
                         </LinearLayout>

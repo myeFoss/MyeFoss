@@ -1,6 +1,6 @@
 <resources>
     <!-- Base Material 3 Theme (Ocean Blue) -->
-    <style name="Theme.EfreiAgenda" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.MyeFoss" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_theme_light_primaryContainer</item>
@@ -28,7 +28,7 @@
     </style>
 
     <!-- Emerald Palette Theme -->
-    <style name="Theme.EfreiAgenda.Emerald" parent="Theme.EfreiAgenda">
+    <style name="Theme.MyeFoss.Emerald" parent="Theme.MyeFoss">
         <item name="colorPrimary">@color/emerald_light_primary</item>
         <item name="colorOnPrimary">@color/emerald_light_onPrimary</item>
         <item name="colorPrimaryContainer">@color/emerald_light_primaryContainer</item>
@@ -41,7 +41,7 @@
     </style>
 
     <!-- Purple Palette Theme -->
-    <style name="Theme.EfreiAgenda.Purple" parent="Theme.EfreiAgenda">
+    <style name="Theme.MyeFoss.Purple" parent="Theme.MyeFoss">
         <item name="colorPrimary">@color/purple_light_primary</item>
         <item name="colorOnPrimary">@color/purple_light_onPrimary</item>
         <item name="colorPrimaryContainer">@color/purple_light_primaryContainer</item>
@@ -54,7 +54,7 @@
     </style>
 
     <!-- Amber Palette Theme -->
-    <style name="Theme.EfreiAgenda.Amber" parent="Theme.EfreiAgenda">
+    <style name="Theme.MyeFoss.Amber" parent="Theme.MyeFoss">
         <item name="colorPrimary">@color/amber_light_primary</item>
         <item name="colorOnPrimary">@color/amber_light_onPrimary</item>
         <item name="colorPrimaryContainer">@color/amber_light_primaryContainer</item>

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MyEfreiAgenda"
+rootProject.name = "MyeFoss"
 include ':app'
