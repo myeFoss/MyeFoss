@@ -1,0 +1,36 @@
+<resources>
+    <!-- Dark Material 3 Colors -->
+    <color name="md_theme_dark_primary">#9ECAFF</color>
+    <color name="md_theme_dark_onPrimary">#003258</color>
+    <color name="md_theme_dark_primaryContainer">#00497D</color>
+    <color name="md_theme_dark_onPrimaryContainer">#D0E4FF</color>
+    <color name="md_theme_dark_secondary">#BAC8DB</color>
+    <color name="md_theme_dark_onSecondary">#243140</color>
+    <color name="md_theme_dark_secondaryContainer">#3B4858</color>
+    <color name="md_theme_dark_onSecondaryContainer">#D6E4F7</color>
+    <color name="md_theme_dark_tertiary">#D7BDE4</color>
+    <color name="md_theme_dark_onTertiary">#3B2948</color>
+    <color name="md_theme_dark_tertiaryContainer">#533F5F</color>
+    <color name="md_theme_dark_onTertiaryContainer">#F2DAFF</color>
+    <color name="md_theme_dark_error">#FFB4AB</color>
+    <color name="md_theme_dark_onError">#690005</color>
+    <color name="md_theme_dark_errorContainer">#93000A</color>
+    <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
+    <color name="md_theme_dark_background">#111418</color>
+    <color name="md_theme_dark_onBackground">#E1E2E8</color>
+    <color name="md_theme_dark_surface">#111418</color>
+    <color name="md_theme_dark_onSurface">#E1E2E8</color>
+    <color name="md_theme_dark_surfaceVariant">#43474E</color>
+    <color name="md_theme_dark_onSurfaceVariant">#C3C7CF</color>
+    <color name="md_theme_dark_outline">#8D9199</color>
+    <color name="md_theme_dark_outlineVariant">#43474E</color>
+
+    <color name="badge_exam_bg">#93000A</color>
+    <color name="badge_exam_text">#FFDAD6</color>
+    <color name="badge_tp_bg">#4F378B</color>
+    <color name="badge_tp_text">#E8DEF8</color>
+    <color name="badge_remote_bg">#1B4332</color>
+    <color name="badge_remote_text">#B7E4C7</color>
+    <color name="badge_normal_bg">#334155</color>
+    <color name="badge_normal_text">#CBD5E1</color>
+</resources>

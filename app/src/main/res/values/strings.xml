@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Efrei Agenda</string>
+    <string name="login_title">Efrei Agenda</string>
+    <string name="login_subtitle">Accédez à votre emploi du temps Efrei avec le design Material You</string>
+    <string name="btn_login_text">Se connecter avec Efrei</string>
+    <string name="today">Aujourd\'hui</string>
+    <string name="no_courses">Aucun cours prévu</string>
+    <string name="loading_courses">Chargement de votre planning…</string>
+    <string name="error_loading">Impossible de charger l\'agenda</string>
+    <string name="retry">Réessayer</string>
+</resources>
