@@ -655,6 +655,24 @@
                                     android:textSize="15sp"
                                     android:fontFamily="sans-serif-medium" />
 
+                                <View
+                                    android:id="@+id/dividerMonet"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="1dp"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_marginEnd="12dp"
+                                    android:background="?attr/colorOutlineVariant" />
+
+                                <RadioButton
+                                    android:id="@+id/rbPaletteMonet"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:padding="12dp"
+                                    android:text="Couleurs dynamiques (Monet)"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="15sp"
+                                    android:fontFamily="sans-serif-medium" />
+
                             </RadioGroup>
 
                         </com.google.android.material.card.MaterialCardView>
@@ -763,17 +781,28 @@
                                     android:textSize="17sp" />
 
                                 <TextView
+                                    android:id="@+id/textAppVersion"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="14sp"
-                                    android:text="Version 1.0 • Fait avec passion" />
+                                    android:text="Version 0.9.0-rc1" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCheckUpdates"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:text="Rechercher des mises à jour"
+                                    app:icon="@drawable/ic_refresh"
+                                    app:iconSize="18dp" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="8dp"
+                                    android:layout_marginTop="12dp"
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="12sp"
                                     android:alpha="0.7"
@@ -988,6 +1017,219 @@
                                     android:layout_marginTop="4dp"
                                     android:gravity="center"
                                     android:text="Aucune évaluation n'a encore été publiée pour cette année académique."
+                                    android:textColor="?attr/colorOnSurfaceVariant"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </ScrollView>
+
+                </LinearLayout>
+
+                <!-- 5. ABSENCES VIEW CONTAINER -->
+                <LinearLayout
+                    android:id="@+id/tabContainerAbsences"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <!-- Header Back to Scolarité -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnBackFromAbsences"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            app:icon="@drawable/ic_chevron_left"
+                            app:iconTint="?attr/colorOnSurface" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Suivi des Absences"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="24dp">
+
+                            <!-- School Year Dropdown Selector Card -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:layout_marginBottom="12dp"
+                                app:cardCornerRadius="16dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="?attr/colorOutlineVariant"
+                                app:cardBackgroundColor="?attr/colorSurface">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="16dp"
+                                    android:paddingEnd="12dp"
+                                    android:paddingTop="8dp"
+                                    android:paddingBottom="8dp">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:src="@drawable/ic_calendar"
+                                        app:tint="?attr/colorPrimary" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="12dp"
+                                        android:fontFamily="sans-serif-medium"
+                                        android:text="Année :"
+                                        android:textColor="?attr/colorOnSurface"
+                                        android:textSize="14sp" />
+
+                                    <Spinner
+                                        android:id="@+id/spinnerAbsencesSchoolYear"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:spinnerMode="dropdown" />
+
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <!-- Absences Summary Card -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="16dp"
+                                app:cardCornerRadius="20dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="?attr/colorOutlineVariant"
+                                app:cardBackgroundColor="?attr/colorSurface">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:padding="20dp">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="sans-serif-bold"
+                                            android:text="Total des Absences"
+                                            android:textColor="?attr/colorOnSurface"
+                                            android:textSize="16sp" />
+
+                                        <TextView
+                                            android:id="@+id/tvAbsencesSummaryLabel"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="Année académique"
+                                            android:textColor="?attr/colorOnSurfaceVariant"
+                                            android:textSize="13sp" />
+                                    </LinearLayout>
+
+                                    <TextView
+                                        android:id="@+id/tvAbsencesTotalHours"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:textColor="?attr/colorPrimary"
+                                        android:textSize="24sp"
+                                        android:text="0h" />
+
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-bold"
+                                android:text="Historique des absences"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="13sp"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.05"
+                                android:layout_marginBottom="12dp" />
+
+                            <!-- List of absences container -->
+                            <LinearLayout
+                                android:id="@+id/layoutAbsencesList"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+
+                            <!-- Empty state when no absences -->
+                            <LinearLayout
+                                android:id="@+id/layoutAbsencesEmptyState"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:paddingTop="36dp"
+                                android:paddingBottom="36dp"
+                                android:visibility="gone">
+
+                                <ImageView
+                                    android:layout_width="56dp"
+                                    android:layout_height="56dp"
+                                    android:src="@drawable/ic_badge"
+                                    app:tint="?attr/colorOutline" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:text="Aucune absence"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:gravity="center"
+                                    android:text="Félicitations ! Aucune absence enregistrée pour cette année."
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="13sp" />
 
