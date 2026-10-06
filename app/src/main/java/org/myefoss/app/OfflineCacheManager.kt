@@ -187,6 +187,19 @@ object OfflineCacheManager {
             emptyList()
         }
     }
+
+    fun clearAllCache(context: Context) {
+        try {
+            val filesDir = context.filesDir ?: return
+            filesDir.listFiles()?.forEach { file ->
+                if (file.name.startsWith("myefoss_") && file.name.endsWith(".json")) {
+                    file.delete()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
 
 data class StudentGrade(
