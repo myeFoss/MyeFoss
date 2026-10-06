@@ -169,8 +169,14 @@ class CourseSyncWorker(
             requestMethod = "GET"
             connectTimeout = 15000
             readTimeout = 15000
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            setRequestProperty("Accept", "application/json, text/plain, */*")
+            setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+            setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/planning")
+            setRequestProperty("Origin", "https://www.myefrei.fr")
+            setRequestProperty("Sec-Fetch-Dest", "empty")
+            setRequestProperty("Sec-Fetch-Mode", "cors")
+            setRequestProperty("Sec-Fetch-Site", "same-origin")
             if (mergedCookies.isNotBlank()) {
                 setRequestProperty("Cookie", mergedCookies)
             }
