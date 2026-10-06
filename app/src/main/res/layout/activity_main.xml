@@ -19,33 +19,40 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Top App Bar -->
-            <com.google.android.material.appbar.AppBarLayout
+            <!-- Pixel / Google System App Style Floating Header Bar -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorSurface"
-                app:elevation="0dp">
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="6dp">
 
-                <androidx.appcompat.widget.Toolbar
-                    android:id="@+id/toolbar"
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="8dp">
+                    android:layout_height="52dp"
+                    app:cardCornerRadius="26dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="?attr/colorOutlineVariant"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp">
 
                         <!-- Hamburger Drawer Button -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnMenuDrawer"
                             style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
                             app:icon="@drawable/ic_menu"
+                            app:iconSize="22dp"
                             app:iconTint="?attr/colorOnSurface" />
 
                         <LinearLayout
@@ -62,30 +69,31 @@
                                 android:fontFamily="sans-serif-medium"
                                 android:text="Planning"
                                 android:textColor="?attr/colorOnSurface"
-                                android:textSize="18sp" />
+                                android:textSize="16sp" />
 
                             <TextView
                                 android:id="@+id/tvStudentSubtitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Étudiant"
+                                android:text="Efrei Paris"
                                 android:textColor="?attr/colorOnSurfaceVariant"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
                         </LinearLayout>
 
                         <!-- Refresh Button -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRefresh"
                             style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
                             app:icon="@drawable/ic_refresh"
+                            app:iconSize="20dp"
                             app:iconTint="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
-                </androidx.appcompat.widget.Toolbar>
+                </com.google.android.material.card.MaterialCardView>
 
-            </com.google.android.material.appbar.AppBarLayout>
+            </FrameLayout>
 
             <!-- Main Tab Container: Planning View vs Scolarity View -->
             <FrameLayout

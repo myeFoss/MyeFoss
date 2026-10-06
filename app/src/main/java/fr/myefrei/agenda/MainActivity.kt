@@ -492,13 +492,28 @@ class MainActivity : AppCompatActivity() {
             viewIndicator.visibility = if (hasCourses) View.VISIBLE else View.INVISIBLE
 
             if (isSelected) {
+                chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isSelected = true
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimary))
             } else if (isToday) {
+                chipView.setBackgroundResource(R.drawable.bg_day_chip)
                 chipView.isActivated = true
                 tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
                 tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onPrimaryContainer))
+            } else if (hasCourses) {
+                // Surbrillance pour les jours avec cours
+                chipView.setBackgroundResource(R.drawable.bg_day_has_courses)
+                chipView.isSelected = false
+                chipView.isActivated = false
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSecondaryContainer))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSecondaryContainer))
+            } else {
+                chipView.setBackgroundResource(R.drawable.bg_day_chip)
+                chipView.isSelected = false
+                chipView.isActivated = false
+                tvDayName.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSurfaceVariant))
+                tvDayNumber.setTextColor(ContextCompat.getColor(this, R.color.md_theme_light_onSurface))
             }
 
             chipView.setOnClickListener {
@@ -590,6 +605,10 @@ class MainActivity : AppCompatActivity() {
                         setBackgroundResource(R.drawable.bg_day_chip)
                         isActivated = true
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onPrimaryContainer))
+                    } else if (hasCourses) {
+                        setBackgroundResource(R.drawable.bg_day_has_courses)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSecondaryContainer))
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
                     } else {
                         setTextColor(ContextCompat.getColor(this@MainActivity, R.color.md_theme_light_onSurface))
                     }
