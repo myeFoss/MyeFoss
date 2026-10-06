@@ -888,6 +888,43 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical" />
 
+                            <!-- Empty state when no grades recorded for this year -->
+                            <LinearLayout
+                                android:id="@+id/layoutGradesEmptyState"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:paddingTop="36dp"
+                                android:paddingBottom="36dp"
+                                android:visibility="gone">
+
+                                <ImageView
+                                    android:layout_width="56dp"
+                                    android:layout_height="56dp"
+                                    android:src="@drawable/ic_school"
+                                    app:tint="?attr/colorOutline" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:text="Aucune note disponible"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:gravity="center"
+                                    android:text="Aucune évaluation n'a encore été publiée pour cette année académique."
+                                    android:textColor="?attr/colorOnSurfaceVariant"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
                         </LinearLayout>
                     </ScrollView>
 

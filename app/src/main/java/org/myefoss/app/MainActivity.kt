@@ -175,6 +175,7 @@ class MainActivity : AppCompatActivity() {
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         layoutGradesList = findViewById(R.id.layoutGradesList)
+        layoutGradesEmptyState = findViewById(R.id.layoutGradesEmptyState)
         tvGeneralAverage = findViewById(R.id.tvGeneralAverage)
         tvGradesSemesterLabel = findViewById(R.id.tvGradesSemesterLabel)
         spinnerSchoolYear = findViewById(R.id.spinnerSchoolYear)
@@ -428,6 +429,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var tvGeneralAverage: TextView
     private lateinit var tvGradesSemesterLabel: TextView
+    private lateinit var layoutGradesEmptyState: LinearLayout
 
     private var currentSelectedYear: String = ""
 
@@ -479,6 +481,8 @@ class MainActivity : AppCompatActivity() {
         val cachedGrades = OfflineCacheManager.loadGrades(this, schoolYear)
         if (cachedGrades.isNotEmpty()) {
             displayGradesGroupedByUe(cachedGrades, schoolYear)
+        } else {
+            displayGradesGroupedByUe(emptyList(), schoolYear)
         }
 
         // 2. Fetch fresh grades asynchronously from official API
@@ -488,15 +492,12 @@ class MainActivity : AppCompatActivity() {
                     fetchGradesFromApi(schoolYear)
                 }
 
-                if (freshGrades.isNotEmpty()) {
-                    OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
-                    displayGradesGroupedByUe(freshGrades, schoolYear)
-                } else if (cachedGrades.isEmpty()) {
-                    displayGradesGroupedByUe(getDefaultSampleGrades(schoolYear), schoolYear)
-                }
+                OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
+                displayGradesGroupedByUe(freshGrades, schoolYear)
             } catch (e: Exception) {
+                // Keep displaying cached or empty state without inserting fictitious grades
                 if (cachedGrades.isEmpty()) {
-                    displayGradesGroupedByUe(getDefaultSampleGrades(schoolYear), schoolYear)
+                    displayGradesGroupedByUe(emptyList(), schoolYear)
                 }
             }
         }
@@ -517,6 +518,16 @@ class MainActivity : AppCompatActivity() {
         layoutGradesList.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
+        tvGradesSemesterLabel.text = "Année académique $schoolYear"
+
+        if (grades.isEmpty()) {
+            tvGeneralAverage.text = "--"
+            layoutGradesEmptyState.visibility = View.VISIBLE
+            return
+        }
+
+        layoutGradesEmptyState.visibility = View.GONE
+
         // Calculate overall average across all valid numeric grades
         var totalPoints = 0.0
         var totalCount = 0
@@ -534,8 +545,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             tvGeneralAverage.text = "--"
         }
-
-        tvGradesSemesterLabel.text = "Année académique $schoolYear"
 
         // Group by UE
         val groupedByUe = grades.groupBy { it.ue }
@@ -585,53 +594,6 @@ class MainActivity : AppCompatActivity() {
 
             layoutGradesList.addView(ueGroupView)
         }
-    }
-
-    private fun getDefaultSampleGrades(schoolYear: String): List<StudentGrade> {
-        return listOf(
-            StudentGrade(
-                courseName = "Architecture Cloud & Microservices",
-                gradeValue = "16.5 / 20",
-                details = "Projet Final • Coeff 3",
-                date = "28/09/$schoolYear",
-                ue = "UE 1 : Génie Logiciel & Cloud"
-            ),
-            StudentGrade(
-                courseName = "DevOps, CI/CD & Kubernetes",
-                gradeValue = "15.0 / 20",
-                details = "TP Évalué • Coeff 2",
-                date = "22/09/$schoolYear",
-                ue = "UE 1 : Génie Logiciel & Cloud"
-            ),
-            StudentGrade(
-                courseName = "Sécurité des Applications Web",
-                gradeValue = "14.0 / 20",
-                details = "Partiel Écrit • Coeff 2",
-                date = "15/09/$schoolYear",
-                ue = "UE 2 : Sécurité des Systèmes"
-            ),
-            StudentGrade(
-                courseName = "Audit & Pentest Web",
-                gradeValue = "16.0 / 20",
-                details = "Contrôle Continu • Coeff 2",
-                date = "12/09/$schoolYear",
-                ue = "UE 2 : Sécurité des Systèmes"
-            ),
-            StudentGrade(
-                courseName = "Management de Projet Agile",
-                gradeValue = "17.0 / 20",
-                details = "Soutenance • Coeff 1.5",
-                date = "10/09/$schoolYear",
-                ue = "UE 3 : Management & Communication"
-            ),
-            StudentGrade(
-                courseName = "Anglais Professionnel & Toeic",
-                gradeValue = "15.5 / 20",
-                details = "Contrôle Continu • Coeff 1",
-                date = "04/09/$schoolYear",
-                ue = "UE 3 : Management & Communication"
-            )
-        )
     }
 
     private fun fetchGradesFromApi(schoolYear: String): List<StudentGrade> {
