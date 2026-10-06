@@ -22,7 +22,7 @@ import java.net.URL
 object UpdateManager {
 
     private const val GITHUB_REPO = "myeFoss/MyeFoss"
-    private const val RELEASES_API = "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+    private const val RELEASES_API = "https://api.github.com/repos/$GITHUB_REPO/releases?per_page=1"
 
     data class ReleaseInfo(
         val tagName: String,
@@ -37,14 +37,16 @@ object UpdateManager {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+            conn.setRequestProperty("User-Agent", "MyeFoss-App")
             conn.connectTimeout = 8000
             conn.readTimeout = 8000
 
             if (conn.responseCode != 200) return@withContext null
 
             val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(jsonStr)
+            val releasesArray = JSONArray(jsonStr)
+            if (releasesArray.length() == 0) return@withContext null
+            val json = releasesArray.getJSONObject(0)
 
             val tagName = json.optString("tag_name", "")
             val name = json.optString("name", tagName)
