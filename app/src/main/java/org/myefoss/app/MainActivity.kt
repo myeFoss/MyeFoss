@@ -111,6 +111,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var rvAgenda: RecyclerView
+    private lateinit var btnRefreshGrades: MaterialButton
+    private lateinit var btnRefreshAbsences: MaterialButton
+    private lateinit var swipeRefreshGrades: SwipeRefreshLayout
+    private lateinit var swipeRefreshAbsences: SwipeRefreshLayout
 
     // Scolarity views
     private lateinit var cardGrades: MaterialCardView
@@ -182,7 +186,8 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val release = UpdateManager.checkLatestRelease()
             if (release != null && UpdateManager.isNewerVersion(BuildConfig.VERSION_NAME, release.tagName)) {
-                UpdateManager.showUpdateDialog(this@MainActivity, release) {}
+                val changelog = UpdateManager.fetchChangelogMarkdown(BuildConfig.VERSION_NAME, release.tagName)
+                UpdateManager.showUpdateDialog(this@MainActivity, release, changelog) {}
             }
         }
     }
@@ -208,6 +213,8 @@ class MainActivity : AppCompatActivity() {
         tabContainerAbsences = findViewById(R.id.tabContainerAbsences)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
+        btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
+        swipeRefreshGrades = findViewById(R.id.swipeRefreshGrades)
         layoutGradesList = findViewById(R.id.layoutGradesList)
         layoutGradesEmptyState = findViewById(R.id.layoutGradesEmptyState)
         tvGeneralAverage = findViewById(R.id.tvGeneralAverage)
@@ -215,6 +222,8 @@ class MainActivity : AppCompatActivity() {
         spinnerSchoolYear = findViewById(R.id.spinnerSchoolYear)
 
         btnBackFromAbsences = findViewById(R.id.btnBackFromAbsences)
+        btnRefreshAbsences = findViewById(R.id.btnRefreshAbsences)
+        swipeRefreshAbsences = findViewById(R.id.swipeRefreshAbsences)
         layoutAbsencesList = findViewById(R.id.layoutAbsencesList)
         layoutAbsencesEmptyState = findViewById(R.id.layoutAbsencesEmptyState)
         tvAbsencesTotalHours = findViewById(R.id.tvAbsencesTotalHours)
@@ -361,8 +370,24 @@ class MainActivity : AppCompatActivity() {
             showScolarityTab()
         }
 
+        btnRefreshGrades.setOnClickListener {
+            loadStudentGrades(currentSelectedYear.ifBlank { getCurrentAcademicYear() }, isSwipe = true)
+        }
+
+        swipeRefreshGrades.setOnRefreshListener {
+            loadStudentGrades(currentSelectedYear.ifBlank { getCurrentAcademicYear() }, isSwipe = true)
+        }
+
         btnBackFromAbsences.setOnClickListener {
             showScolarityTab()
+        }
+
+        btnRefreshAbsences.setOnClickListener {
+            loadStudentAbsences(currentSelectedAbsencesYear.ifBlank { getCurrentAcademicYear() }, isSwipe = true)
+        }
+
+        swipeRefreshAbsences.setOnRefreshListener {
+            loadStudentAbsences(currentSelectedAbsencesYear.ifBlank { getCurrentAcademicYear() }, isSwipe = true)
         }
 
         setupThemeSettings()
@@ -537,7 +562,8 @@ class MainActivity : AppCompatActivity() {
                 val release = UpdateManager.checkLatestRelease()
                 btnCheckUpdates.isEnabled = true
                 if (release != null && UpdateManager.isNewerVersion(BuildConfig.VERSION_NAME, release.tagName)) {
-                    UpdateManager.showUpdateDialog(this@MainActivity, release) {}
+                    val changelog = UpdateManager.fetchChangelogMarkdown(BuildConfig.VERSION_NAME, release.tagName)
+                    UpdateManager.showUpdateDialog(this@MainActivity, release, changelog) {}
                 } else if (release != null) {
                     Toast.makeText(this@MainActivity, "MyeFoss est à jour (${BuildConfig.VERSION_NAME})", Toast.LENGTH_SHORT).show()
                 } else {
@@ -617,16 +643,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadStudentGrades(schoolYear: String = getCurrentAcademicYear()) {
+    private fun loadStudentGrades(schoolYear: String = getCurrentAcademicYear(), isSwipe: Boolean = false) {
         setupSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
-        layoutGradesList.removeAllViews()
+        if (!isSwipe) layoutGradesList.removeAllViews()
 
         // 1. Load cached grades first for this specific year
         val cachedGrades = OfflineCacheManager.loadGrades(this, schoolYear)
         if (cachedGrades.isNotEmpty()) {
             displayGradesGroupedByUe(cachedGrades, schoolYear)
-        } else {
+        } else if (!isSwipe) {
             displayGradesGroupedByUe(emptyList(), schoolYear)
+        }
+
+        if (isSwipe) {
+            swipeRefreshGrades.isRefreshing = true
         }
 
         // 2. Fetch fresh grades asynchronously from official API
@@ -642,14 +672,17 @@ class MainActivity : AppCompatActivity() {
                     setupSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
                 }
 
-                OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
-                displayGradesGroupedByUe(freshGrades, schoolYear)
+                if (freshGrades.isNotEmpty() || cachedGrades.isEmpty()) {
+                    OfflineCacheManager.saveGrades(this@MainActivity, freshGrades, schoolYear)
+                    displayGradesGroupedByUe(freshGrades, schoolYear)
+                }
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossGrades", "Error fetching grades: ${e.message}", e)
-                // Keep displaying cached or empty state without inserting fictitious grades
                 if (cachedGrades.isEmpty()) {
                     displayGradesGroupedByUe(emptyList(), schoolYear)
                 }
+            } finally {
+                swipeRefreshGrades.isRefreshing = false
             }
         }
     }
@@ -995,13 +1028,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadStudentAbsences(schoolYear: String = getCurrentAcademicYear()) {
+    private fun loadStudentAbsences(schoolYear: String = getCurrentAcademicYear(), isSwipe: Boolean = false) {
         setupAbsencesSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
-        layoutAbsencesList.removeAllViews()
+        if (!isSwipe) layoutAbsencesList.removeAllViews()
 
         // 1. Load cached absences first
         val cached = OfflineCacheManager.loadAbsences(this, schoolYear)
-        displayAbsences(cached, schoolYear)
+        if (cached.isNotEmpty()) {
+            displayAbsences(cached, schoolYear)
+        } else if (!isSwipe) {
+            displayAbsences(emptyList(), schoolYear)
+        }
+
+        if (isSwipe) {
+            swipeRefreshAbsences.isRefreshing = true
+        }
 
         // 2. Fetch fresh absences from server
         lifecycleScope.launch {
@@ -1016,13 +1057,17 @@ class MainActivity : AppCompatActivity() {
                     setupAbsencesSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
                 }
 
-                OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
-                displayAbsences(fresh, schoolYear)
+                if (fresh.isNotEmpty() || cached.isEmpty()) {
+                    OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
+                    displayAbsences(fresh, schoolYear)
+                }
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossAbsences", "Error fetching absences: ${e.message}", e)
                 if (cached.isEmpty()) {
                     displayAbsences(emptyList(), schoolYear)
                 }
+            } finally {
+                swipeRefreshAbsences.isRefreshing = false
             }
         }
     }
