@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:fontFamily="sans-serif-bold"
-        android:text="Étudiant Efrei"
+        android:text="Étudiant"
         android:textColor="?attr/colorOnPrimaryContainer"
         android:textSize="18sp" />
 
@@ -63,7 +63,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:text="session.active@efrei.net"
+        android:text="Compte connecté"
         android:textColor="?attr/colorOnPrimaryContainer"
         android:alpha="0.8"
         android:textSize="13sp" />

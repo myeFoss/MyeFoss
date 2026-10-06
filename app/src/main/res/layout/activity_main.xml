@@ -701,6 +701,15 @@
                                     android:textColor="?attr/colorOnSurfaceVariant"
                                     android:textSize="14sp"
                                     android:text="Votre emploi du temps et votre scolarité en un coup d'œil, fluide et disponible même sans connexion internet." />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:textColor="?attr/colorOnSurfaceVariant"
+                                    android:textSize="12sp"
+                                    android:alpha="0.8"
+                                    android:text="@string/legal_disclaimer" />
                             </LinearLayout>
 
                         </com.google.android.material.card.MaterialCardView>
@@ -907,6 +916,16 @@
                         android:text="@string/btn_login_text"
                         app:cornerRadius="16dp"
                         app:icon="@drawable/ic_calendar" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        android:text="@string/legal_disclaimer"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="11sp"
+                        android:alpha="0.75" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

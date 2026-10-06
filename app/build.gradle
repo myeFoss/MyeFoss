@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'fr.myefrei.agenda'
+    namespace 'org.myefoss.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "fr.myefrei.app"
+        applicationId "org.myefoss.app"
         minSdk 24
         targetSdk 34
         versionCode 1

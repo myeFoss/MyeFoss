@@ -1,4 +1,4 @@
-package fr.myefrei.agenda
+package org.myefoss.app
 
 import android.annotation.SuppressLint
 import android.os.Bundle

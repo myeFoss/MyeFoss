@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">MyeFoss</string>
     <string name="login_title">MyeFoss</string>
-    <string name="login_subtitle">Votre emploi du temps et scolarité Efrei libres et fluides</string>
-    <string name="btn_login_text">Se connecter avec Efrei</string>
+    <string name="login_subtitle">Client open-source alternatif pour votre emploi du temps et votre scolarité</string>
+    <string name="btn_login_text">Connexion via le portail étudiant</string>
+    <string name="legal_disclaimer">MyeFoss est un projet étudiant open-source indépendant, non affilié, non sponsorisé et non approuvé par l\'Efrei.</string>
     <string name="today">Aujourd\'hui</string>
     <string name="no_courses">Aucun cours prévu</string>
     <string name="loading_courses">Chargement de votre planning…</string>

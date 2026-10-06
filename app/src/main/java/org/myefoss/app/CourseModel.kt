@@ -1,4 +1,4 @@
-package fr.myefrei.agenda
+package org.myefoss.app
 
 import org.json.JSONArray
 import org.json.JSONObject

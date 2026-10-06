@@ -21,7 +21,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="fr.myefrei.app" />
+                <data android:scheme="myefoss" />
             </intent-filter>
         </activity>
     </application>

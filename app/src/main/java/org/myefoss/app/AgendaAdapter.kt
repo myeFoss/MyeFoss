@@ -1,4 +1,4 @@
-package fr.myefrei.agenda
+package org.myefoss.app
 
 import android.content.Context
 import android.graphics.Color
