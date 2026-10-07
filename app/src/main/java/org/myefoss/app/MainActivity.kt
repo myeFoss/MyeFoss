@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutAbsencesEmptyState: LinearLayout
     private lateinit var tvAbsencesTotalHours: TextView
     private lateinit var tvAbsencesSummaryLabel: TextView
+    private lateinit var tvAbsencesJustifiedCount: TextView
+    private lateinit var tvAbsencesUnjustifiedCount: TextView
     private lateinit var spinnerAbsencesSchoolYear: android.widget.Spinner
     private var isAbsencesYearSpinnerInitialized: Boolean = false
 
@@ -229,6 +231,8 @@ class MainActivity : AppCompatActivity() {
         layoutAbsencesEmptyState = findViewById(R.id.layoutAbsencesEmptyState)
         tvAbsencesTotalHours = findViewById(R.id.tvAbsencesTotalHours)
         tvAbsencesSummaryLabel = findViewById(R.id.tvAbsencesSummaryLabel)
+        tvAbsencesJustifiedCount = findViewById(R.id.tvAbsencesJustifiedCount)
+        tvAbsencesUnjustifiedCount = findViewById(R.id.tvAbsencesUnjustifiedCount)
         spinnerAbsencesSchoolYear = findViewById(R.id.spinnerAbsencesSchoolYear)
 
         rgThemeMode = findViewById(R.id.rgThemeMode)
@@ -1096,12 +1100,8 @@ class MainActivity : AppCompatActivity() {
                     setupAbsencesSchoolYearSpinner(cachedStudentPeriods.map { it.schoolYear })
                 }
 
-                if (fresh.isNotEmpty()) {
-                    OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
-                    displayAbsences(fresh, schoolYear)
-                } else if (cached.isEmpty()) {
-                    displayAbsences(emptyList(), schoolYear)
-                }
+                OfflineCacheManager.saveAbsences(this@MainActivity, fresh, schoolYear)
+                displayAbsences(fresh, schoolYear)
             } catch (e: Exception) {
                 android.util.Log.e("MyeFossAbsences", "Error fetching absences: ${e.message}", e)
                 if (cached.isEmpty()) {
@@ -1118,6 +1118,15 @@ class MainActivity : AppCompatActivity() {
         val inflater = LayoutInflater.from(this)
 
         tvAbsencesSummaryLabel.text = "Année académique $schoolYear"
+
+        val justifiedList = absences.filter { it.justified }
+        val unjustifiedList = absences.filter { !it.justified }
+
+        val justifiedCount = justifiedList.size
+        val unjustifiedCount = unjustifiedList.size
+
+        tvAbsencesJustifiedCount.text = "$justifiedCount ${if (justifiedCount > 1) "justifiées" else "justifiée"}"
+        tvAbsencesUnjustifiedCount.text = "$unjustifiedCount ${if (unjustifiedCount > 1) "injustifiées" else "injustifiée"}"
 
         if (absences.isEmpty()) {
             tvAbsencesTotalHours.text = "0h"
@@ -1146,6 +1155,7 @@ class MainActivity : AppCompatActivity() {
             val tvDate: TextView = view.findViewById(R.id.tvAbsenceDate)
             val tvDuration: TextView = view.findViewById(R.id.tvAbsenceDuration)
             val tvType: TextView = view.findViewById(R.id.tvAbsenceType)
+            val tvReason: TextView = view.findViewById(R.id.tvAbsenceReason)
 
             tvSubject.text = abs.courseName
             tvDate.text = abs.date
@@ -1158,6 +1168,13 @@ class MainActivity : AppCompatActivity() {
             } else {
                 tvBadge.text = "Non justifiée"
                 tvBadge.setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorError, android.graphics.Color.RED))
+            }
+
+            if (!abs.reason.isNullOrBlank()) {
+                tvReason.visibility = View.VISIBLE
+                tvReason.text = "Motif : ${abs.reason}"
+            } else {
+                tvReason.visibility = View.GONE
             }
 
             layoutAbsencesList.addView(view)
@@ -1202,8 +1219,8 @@ class MainActivity : AppCompatActivity() {
             val encProgram = URLEncoder.encode(mp.programId, "UTF-8")
             val encServerYear = URLEncoder.encode(mp.schoolYear, "UTF-8")
             if (mp.period.isNotBlank() && mp.programId.isNotBlank()) {
-                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod&programId=$encProgram")
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?schoolYear=$encServerYear&period=$encPeriod&programId=$encProgram")
+                endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod&programId=$encProgram")
             }
             if (mp.period.isNotBlank()) {
                 endpointsToTry.add("https://www.myefrei.fr/api/rest/student/absences?period=$encPeriod")
@@ -1278,22 +1295,87 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun extractAbsencesRecursive(obj: JSONObject, outList: MutableList<StudentAbsence>) {
-        val courseName = obj.optString("courseName", obj.optString("subject", obj.optString("module", obj.optString("course", obj.optString("name", obj.optString("title", ""))))))
-        val hasDate = obj.has("date") || obj.has("startDate") || obj.has("start") || obj.has("sessionDate") || obj.has("dateSession") || obj.has("createdAt")
-        val hasDuration = obj.has("duration") || obj.has("hours") || obj.has("nbHours") || obj.has("totalHours")
-        val hasAbsenceMarkers = obj.has("justified") || obj.has("isJustified") || obj.has("motif") || obj.has("reason") || obj.has("late") || obj.has("retard")
+        val courseName = obj.optString("courseName",
+            obj.optString("subject",
+            obj.optString("subjectName",
+            obj.optString("module",
+            obj.optString("moduleName",
+            obj.optString("course",
+            obj.optString("name",
+            obj.optString("title",
+            obj.optString("label",
+            obj.optString("matiere", ""))))))))))
 
-        if (courseName.isNotBlank() && (hasDate || hasDuration || hasAbsenceMarkers)) {
-            val rawDate = obj.optString("date", obj.optString("startDate", obj.optString("start", obj.optString("sessionDate", obj.optString("dateSession", "")))))
+        val rawDate = obj.optString("date",
+            obj.optString("startDate",
+            obj.optString("start",
+            obj.optString("dateSession",
+            obj.optString("sessionDate",
+            obj.optString("day",
+            obj.optString("createdAt", "")))))))
+
+        val hasDuration = obj.has("duration") || obj.has("hours") || obj.has("nbHours") ||
+                obj.has("totalHours") || obj.has("creneau") || obj.has("durationInMinutes") || obj.has("lateDurationInMinutes")
+
+        val hasAbsenceMarkers = obj.has("justified") || obj.has("isJustified") || obj.has("justifie") ||
+                obj.has("motif") || obj.has("reason") || obj.has("late") || obj.has("retard") ||
+                obj.has("absenceType") || obj.has("sessionType") || obj.has("missed")
+
+        if (courseName.isNotBlank() && (rawDate.isNotBlank() || hasDuration || hasAbsenceMarkers)) {
             val dateStr = if (rawDate.length >= 10 && rawDate.contains("T")) {
-                rawDate.substring(0, 10)
-            } else {
+                val isoDate = rawDate.substring(0, 10)
+                try {
+                    val inFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    val outFmt = SimpleDateFormat("dd MMM yyyy", Locale.FRANCE)
+                    val d = inFmt.parse(isoDate)
+                    if (d != null) outFmt.format(d) else isoDate
+                } catch (e: Exception) {
+                    isoDate
+                }
+            } else if (rawDate.isNotBlank()) {
                 rawDate
+            } else {
+                "Date inconnue"
             }
-            val hoursStr = obj.optString("hours", obj.optString("duration", obj.optString("nbHours", obj.optString("totalHours", "1h30"))))
-            val isJustified = obj.optBoolean("justified", obj.optBoolean("isJustified", obj.optBoolean("justifie", false)))
-            val reason = obj.optString("reason", obj.optString("motif", obj.optString("comment", "")))
-            val type = obj.optString("type", obj.optString("sessionType", obj.optString("activity", "")))
+
+            var hoursStr = obj.optString("hours",
+                obj.optString("duration",
+                obj.optString("nbHours",
+                obj.optString("totalHours", ""))))
+
+            if (hoursStr.isBlank()) {
+                val durationMin = obj.optInt("durationInMinutes", obj.optInt("lateDurationInMinutes", -1))
+                if (durationMin > 0) {
+                    val h = durationMin / 60
+                    val m = durationMin % 60
+                    hoursStr = if (m > 0) "${h}h${String.format(Locale.FRANCE, "%02d", m)}" else "${h}h"
+                } else {
+                    val startTime = obj.optString("startTime", "")
+                    val endTime = obj.optString("endTime", "")
+                    hoursStr = if (startTime.isNotBlank() && endTime.isNotBlank()) {
+                        "$startTime - $endTime"
+                    } else {
+                        "1h30"
+                    }
+                }
+            }
+
+            val isJustified = obj.optBoolean("justified",
+                obj.optBoolean("isJustified",
+                obj.optBoolean("justifie",
+                obj.optString("status", "").equals("justified", ignoreCase = true) ||
+                obj.optString("justificationStatus", "").equals("justified", ignoreCase = true))))
+
+            val reason = obj.optString("reason",
+                obj.optString("motif",
+                obj.optString("comment",
+                obj.optString("description",
+                obj.optString("justification", "")))))
+
+            val type = obj.optString("type",
+                obj.optString("absenceType",
+                obj.optString("sessionType",
+                obj.optString("activity", ""))))
 
             outList.add(
                 StudentAbsence(
