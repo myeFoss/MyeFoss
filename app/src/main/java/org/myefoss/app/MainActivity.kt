@@ -56,6 +56,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutLoginScreen: LinearLayout
     private lateinit var layoutLoading: FrameLayout
     private lateinit var loginWebView: WebView
+    private var tvDrawerUserName: TextView? = null
+    private var tvDrawerUserEmail: TextView? = null
 
     // Toolbar views
     private lateinit var btnMenuDrawer: MaterialButton
@@ -192,6 +194,10 @@ class MainActivity : AppCompatActivity() {
             displayPlanning(allCachedCourses)
         }
         cachedStudentPeriods = OfflineCacheManager.loadStudentPeriods(this)
+        val cachedProfile = OfflineCacheManager.loadStudentProfile(this)
+        if (cachedProfile != null) {
+            displayUserProfile(cachedProfile)
+        }
 
         // Restore active screen after theme recreation
         val lastScreen = prefs.getString("last_active_screen", "planning")
@@ -244,6 +250,11 @@ class MainActivity : AppCompatActivity() {
     private fun initViews() {
         drawerLayout = findViewById(R.id.drawerLayout)
         navigationDrawer = findViewById(R.id.navigationDrawer)
+        val headerView = navigationDrawer.getHeaderView(0)
+        if (headerView != null) {
+            tvDrawerUserName = headerView.findViewById(R.id.tvDrawerUserName)
+            tvDrawerUserEmail = headerView.findViewById(R.id.tvDrawerUserEmail)
+        }
         bottomNavigation = findViewById(R.id.bottomNavigation)
         layoutAppScreen = findViewById(R.id.layoutAppScreen)
         layoutLoginScreen = findViewById(R.id.layoutLoginScreen)
@@ -2551,9 +2562,188 @@ class MainActivity : AppCompatActivity() {
         if (!isExplicitlyLoggedOut && (cookies.contains("myefrei.sid") || allCachedCourses.isNotEmpty())) {
             showScreen(Screen.APP)
             loadAgendaForCurrentWeek()
+            fetchAndDisplayUserProfile()
         } else {
             showScreen(Screen.LOGIN)
         }
+    }
+
+    private fun displayUserProfile(profile: StudentProfile) {
+        val displayName = when {
+            profile.fullName.isNotBlank() -> profile.fullName
+            profile.firstName.isNotBlank() && profile.lastName.isNotBlank() -> "${profile.firstName} ${profile.lastName}"
+            profile.firstName.isNotBlank() -> profile.firstName
+            else -> "Étudiant"
+        }
+        tvDrawerUserName?.text = displayName
+        if (profile.email.isNotBlank()) {
+            tvDrawerUserEmail?.text = profile.email
+        } else if (profile.program.isNotBlank()) {
+            tvDrawerUserEmail?.text = profile.program
+        }
+    }
+
+    private fun fetchAndDisplayUserProfile() {
+        lifecycleScope.launch {
+            val profile = withContext(Dispatchers.IO) {
+                fetchStudentProfileFromApi() ?: fetchStudentProfileFromHome()
+            }
+            if (profile != null) {
+                OfflineCacheManager.saveStudentProfile(this@MainActivity, profile)
+                displayUserProfile(profile)
+            }
+        }
+    }
+
+    private fun fetchStudentProfileFromApi(): StudentProfile? {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/user/info") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val profileEndpoints = listOf(
+            "https://www.myefrei.fr/api/rest/student/user/info",
+            "https://www.myefrei.fr/api/rest/student/user",
+            "https://www.myefrei.fr/api/rest/user/info"
+        )
+
+        for (endpoint in profileEndpoints) {
+            try {
+                val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/home")
+                    setRequestProperty("Origin", "https://www.myefrei.fr")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                if (conn.responseCode in 200..299) {
+                    val resp = conn.inputStream.bufferedReader().use { it.readText() }.trim()
+                    if (resp.startsWith("{")) {
+                        val root = JSONObject(resp)
+                        val userObj = root.optJSONObject("user") ?: root.optJSONObject("data") ?: root
+                        val firstName = userObj.optString("firstName", userObj.optString("prenom", "")).trim()
+                        val lastName = userObj.optString("lastName", userObj.optString("nom", "")).trim()
+                        val fullName = userObj.optString("fullName", userObj.optString("name", "")).trim()
+                        val email = userObj.optString("email", userObj.optString("mail", "")).trim()
+                        val studentId = userObj.optString("studentId", userObj.optString("id", "")).trim()
+                        val program = userObj.optString("program", userObj.optString("filiere", "")).trim()
+
+                        if (firstName.isNotBlank() || lastName.isNotBlank() || fullName.isNotBlank()) {
+                            return StudentProfile(
+                                fullName = if (fullName.isNotBlank()) fullName else "$firstName $lastName".trim(),
+                                firstName = firstName,
+                                lastName = lastName,
+                                email = email,
+                                studentId = studentId,
+                                program = program
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Try next
+            }
+        }
+        return null
+    }
+
+    private fun fetchStudentProfileFromHome(): StudentProfile? {
+        val cookieManager = CookieManager.getInstance()
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val urls = listOf(
+            "https://www.myefrei.fr/portal/student/home",
+            "https://www.myefrei.fr/portal/student/planning"
+        )
+
+        for (urlStr in urls) {
+            try {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    instanceFollowRedirects = false
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                if (conn.responseCode in 200..299) {
+                    val html = conn.inputStream.bufferedReader().use { it.readText() }
+                    val scriptIdx = html.indexOf("<script id=\"__NEXT_DATA__\" type=\"application/json\">")
+                    if (scriptIdx != -1) {
+                        val start = html.indexOf('>', scriptIdx) + 1
+                        val end = html.indexOf("</script>", start)
+                        if (start != -1 && end > start) {
+                            val jsonStr = html.substring(start, end).trim()
+                            val root = JSONObject(jsonStr)
+                            val props = root.optJSONObject("props")
+                            val pageProps = props?.optJSONObject("pageProps")
+                            val userObj = pageProps?.optJSONObject("user")
+                                ?: pageProps?.optJSONObject("userInfo")
+                                ?: props?.optJSONObject("user")
+                                ?: root.optJSONObject("user")
+
+                            if (userObj != null) {
+                                val firstName = userObj.optString("firstName", userObj.optString("prenom", "")).trim()
+                                val lastName = userObj.optString("lastName", userObj.optString("nom", "")).trim()
+                                val fullName = userObj.optString("fullName", userObj.optString("name", "")).trim()
+                                val email = userObj.optString("email", userObj.optString("mail", "")).trim()
+                                val studentId = userObj.optString("studentId", userObj.optString("id", "")).trim()
+                                val program = userObj.optString("program", userObj.optString("filiere", "")).trim()
+
+                                if (firstName.isNotBlank() || lastName.isNotBlank() || fullName.isNotBlank()) {
+                                    return StudentProfile(
+                                        fullName = if (fullName.isNotBlank()) fullName else "$firstName $lastName".trim(),
+                                        firstName = firstName,
+                                        lastName = lastName,
+                                        email = email,
+                                        studentId = studentId,
+                                        program = program
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Try next
+            }
+        }
+        return null
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -2586,6 +2776,7 @@ class MainActivity : AppCompatActivity() {
                         loginWebView.visibility = View.GONE
                         showScreen(Screen.APP)
                         loadAgendaForCurrentWeek()
+                        fetchAndDisplayUserProfile()
                         return true
                     }
                 }
