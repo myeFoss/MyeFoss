@@ -96,6 +96,9 @@ Altho I heavily used AI, I am still the master here. I control my tool, and my t
 - **Scolarity Hub**:
   - **Grades & Results**: Multi-year academic selector, unit breakdown (UE), and general average calculator with legal advisory disclaimers.
   - **Absence Tracking**: Comprehensive attendance history by academic year, hours summary, and justification statuses.
+- **Campus Directory & Navigation**:
+  - Directory of Efrei campuses (Paris - Villejuif, Bordeaux) with detailed addresses, postal codes, and associated buildings.
+  - One-tap intent to launch external navigation apps (Google Maps, Waze, etc.) or web navigation.
 - **Background Course Change Alerts**:
   - Battery-friendly periodic background sync using Android WorkManager.
   - Instant notifications for room changes, rescheduled classes, or cancellations.

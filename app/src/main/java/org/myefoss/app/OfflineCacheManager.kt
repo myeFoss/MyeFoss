@@ -235,6 +235,59 @@ object OfflineCacheManager {
         }
     }
 
+    private const val CAMPUS_CACHE_FILE = "myefoss_campus_cache.json"
+
+    fun saveCampuses(context: Context, campuses: List<CampusInfo>) {
+        try {
+            val file = File(context.filesDir, CAMPUS_CACHE_FILE)
+            val jsonArray = JSONArray()
+            campuses.forEach { c ->
+                val obj = JSONObject().apply {
+                    put("id", c.id)
+                    put("name", c.name)
+                    put("city", c.city)
+                    put("address", c.address)
+                    c.postalCode?.let { put("postalCode", it) }
+                    c.sitesDescription?.let { put("sitesDescription", it) }
+                    c.latitude?.let { put("latitude", it) }
+                    c.longitude?.let { put("longitude", it) }
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadCampuses(context: Context): List<CampusInfo> {
+        return try {
+            val file = File(context.filesDir, CAMPUS_CACHE_FILE)
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<CampusInfo>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    CampusInfo(
+                        id = obj.optString("id", i.toString()),
+                        name = obj.optString("name", "Campus Efrei"),
+                        city = obj.optString("city", ""),
+                        address = obj.optString("address", ""),
+                        postalCode = if (obj.has("postalCode")) obj.optString("postalCode") else null,
+                        sitesDescription = if (obj.has("sitesDescription")) obj.optString("sitesDescription") else null,
+                        latitude = if (obj.has("latitude")) obj.optDouble("latitude") else null,
+                        longitude = if (obj.has("longitude")) obj.optDouble("longitude") else null
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun clearAllCache(context: Context) {
         try {
             val filesDir = context.filesDir ?: return
@@ -275,5 +328,16 @@ data class StudentPeriod(
     val programId: String,
     val parity: String? = null,
     val isCurrentYear: Boolean = false
+)
+
+data class CampusInfo(
+    val id: String,
+    val name: String,
+    val city: String,
+    val address: String,
+    val postalCode: String? = null,
+    val sitesDescription: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 

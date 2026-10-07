@@ -7,4 +7,8 @@
         android:id="@+id/nav_scolarity"
         android:icon="@drawable/ic_school"
         android:title="Scolarité" />
+    <item
+        android:id="@+id/nav_campus"
+        android:icon="@drawable/ic_location"
+        android:title="Campus" />
 </menu>

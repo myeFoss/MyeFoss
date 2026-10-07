@@ -2,6 +2,7 @@ package org.myefoss.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -65,6 +66,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerSettings: ScrollView
     private lateinit var tabContainerGrades: LinearLayout
     private lateinit var tabContainerAbsences: LinearLayout
+    private lateinit var tabContainerCampus: LinearLayout
+
+    // Campus views
+    private lateinit var layoutCampusList: LinearLayout
+    private lateinit var swipeRefreshCampus: SwipeRefreshLayout
+    private lateinit var tvCampusCountSubtitle: TextView
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
@@ -123,6 +130,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cardGrades: MaterialCardView
     private lateinit var cardAbsences: MaterialCardView
     private lateinit var cardLxp: MaterialCardView
+    private lateinit var cardCampus: MaterialCardView
 
     // Login
     private lateinit var btnLogin: MaterialButton
@@ -177,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         when (lastScreen) {
             "settings" -> openSettingsScreen()
             "scolarity" -> showScolarityTab()
+            "campus" -> showCampusTab()
             "grades" -> openGradesScreen()
             "absences" -> openAbsencesScreen()
             else -> showPlanningTab()
@@ -238,6 +247,11 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings = findViewById(R.id.tabContainerSettings)
         tabContainerGrades = findViewById(R.id.tabContainerGrades)
         tabContainerAbsences = findViewById(R.id.tabContainerAbsences)
+        tabContainerCampus = findViewById(R.id.tabContainerCampus)
+
+        layoutCampusList = findViewById(R.id.layoutCampusList)
+        swipeRefreshCampus = findViewById(R.id.swipeRefreshCampus)
+        tvCampusCountSubtitle = findViewById(R.id.tvCampusCountSubtitle)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
@@ -293,6 +307,7 @@ class MainActivity : AppCompatActivity() {
         cardGrades = findViewById(R.id.cardGrades)
         cardAbsences = findViewById(R.id.cardAbsences)
         cardLxp = findViewById(R.id.cardLxp)
+        cardCampus = findViewById(R.id.cardCampus)
 
         btnLogin = findViewById(R.id.btnLogin)
     }
@@ -325,6 +340,10 @@ class MainActivity : AppCompatActivity() {
                     showScolarityFeature("LXP / E-learning")
                     true
                 }
+                R.id.drawer_campus -> {
+                    bottomNavigation.selectedItemId = R.id.nav_campus
+                    true
+                }
                 R.id.drawer_settings -> {
                     openSettingsScreen()
                     true
@@ -345,6 +364,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_scolarity -> {
                     showScolarityTab()
+                    true
+                }
+                R.id.nav_campus -> {
+                    showCampusTab()
                     true
                 }
                 else -> false
@@ -394,6 +417,7 @@ class MainActivity : AppCompatActivity() {
         cardGrades.setOnClickListener { openGradesScreen() }
         cardAbsences.setOnClickListener { openAbsencesScreen() }
         cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
+        cardCampus.setOnClickListener { showCampusTab() }
 
         btnBackFromGrades.setOnClickListener {
             showScolarityTab()
@@ -419,6 +443,10 @@ class MainActivity : AppCompatActivity() {
             loadStudentAbsences(currentSelectedAbsencesYear.ifBlank { getCurrentAcademicYear() }, isSwipe = true)
         }
 
+        swipeRefreshCampus.setOnRefreshListener {
+            loadCampusesList(isSwipe = true)
+        }
+
         setupThemeSettings()
 
         btnLogin.setOnClickListener {
@@ -433,6 +461,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
         tvToolbarTitle.text = "Planning"
         btnRefresh.visibility = View.VISIBLE
         bottomNavigation.menu.findItem(R.id.nav_planning)?.isChecked = true
@@ -446,11 +475,28 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
         tvToolbarTitle.text = "Scolarité"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_scolarity)?.isChecked = true
         // Clear drawer check or leave unselected for sub-items
         navigationDrawer.checkedItem?.isChecked = false
+    }
+
+    private fun showCampusTab() {
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "campus").apply()
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.VISIBLE
+        tvToolbarTitle.text = "Campus"
+        btnRefresh.visibility = View.GONE
+        bottomNavigation.menu.findItem(R.id.nav_campus)?.isChecked = true
+        navigationDrawer.setCheckedItem(R.id.drawer_campus)
+
+        loadCampusesList()
     }
 
     private fun openSettingsScreen() {
@@ -459,6 +505,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
         tabContainerSettings.visibility = View.VISIBLE
         tvToolbarTitle.text = "Paramètres"
         btnRefresh.visibility = View.GONE
@@ -471,6 +518,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
         tabContainerGrades.visibility = View.VISIBLE
         tvToolbarTitle.text = "Notes & Résultats"
         btnRefresh.visibility = View.GONE
@@ -485,6 +533,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerScolarity.visibility = View.GONE
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
         tabContainerAbsences.visibility = View.VISIBLE
         tvToolbarTitle.text = "Suivi des Absences"
         btnRefresh.visibility = View.GONE
@@ -1611,6 +1660,232 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // CAMPUS HUB & NAVIGATION
+    // ─────────────────────────────────────────────────────────────
+
+    private fun getDefaultCampuses(): List<CampusInfo> {
+        return listOf(
+            CampusInfo(
+                id = "villejuif",
+                name = "Campus Paris - Villejuif",
+                city = "Villejuif",
+                address = "30-32 Avenue de la République\n94800 Villejuif",
+                postalCode = "94800",
+                sitesDescription = "Sites : Bâtiments A & B, L'Aquarium (136 Bd Maxime Gorki), La Factory",
+                latitude = 48.788591,
+                longitude = 2.363765
+            ),
+            CampusInfo(
+                id = "bordeaux",
+                name = "Campus Bordeaux",
+                city = "Bordeaux",
+                address = "83 Rue Lucien Faure\n33000 Bordeaux",
+                postalCode = "33000",
+                sitesDescription = "Site : Bassins à flot (prochainement Quartier Tivoli / Rue de Macau)",
+                latitude = 44.861783,
+                longitude = -0.555776
+            )
+        )
+    }
+
+    private fun loadCampusesList(isSwipe: Boolean = false) {
+        if (!isSwipe) layoutCampusList.removeAllViews()
+
+        // 1. Load cached campuses (fallback to default official campuses if empty)
+        val cached = OfflineCacheManager.loadCampuses(this)
+        val initialList = if (cached.isNotEmpty()) cached else getDefaultCampuses()
+        displayCampuses(initialList)
+
+        if (isSwipe) {
+            swipeRefreshCampus.isRefreshing = true
+        }
+
+        // 2. Fetch fresh campuses from API in background if possible
+        lifecycleScope.launch {
+            try {
+                val fresh = withContext(Dispatchers.IO) {
+                    fetchCampusesFromApi()
+                }
+                if (fresh.isNotEmpty()) {
+                    OfflineCacheManager.saveCampuses(this@MainActivity, fresh)
+                    displayCampuses(fresh)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MyeFossCampus", "Error fetching campus info: ${e.message}", e)
+            } finally {
+                swipeRefreshCampus.isRefreshing = false
+            }
+        }
+    }
+
+    private fun displayCampuses(campuses: List<CampusInfo>) {
+        layoutCampusList.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+
+        tvCampusCountSubtitle.text = "${campuses.size} campus en France"
+
+        campuses.forEach { campus ->
+            val view = inflater.inflate(R.layout.item_campus_card, layoutCampusList, false)
+            val tvName: TextView = view.findViewById(R.id.tvCampusName)
+            val tvCity: TextView = view.findViewById(R.id.tvCampusCity)
+            val tvAddress: TextView = view.findViewById(R.id.tvCampusAddress)
+            val tvSites: TextView = view.findViewById(R.id.tvCampusSites)
+            val btnNavigate: MaterialButton = view.findViewById(R.id.btnNavigateCampus)
+
+            tvName.text = campus.name
+            tvCity.text = if (!campus.postalCode.isNullOrBlank()) "${campus.city} (${campus.postalCode})" else campus.city
+            tvAddress.text = campus.address
+
+            if (!campus.sitesDescription.isNullOrBlank()) {
+                tvSites.text = campus.sitesDescription
+                tvSites.visibility = View.VISIBLE
+            } else {
+                tvSites.visibility = View.GONE
+            }
+
+            btnNavigate.setOnClickListener {
+                openNavigationForCampus(campus)
+            }
+
+            layoutCampusList.addView(view)
+        }
+    }
+
+    private fun openNavigationForCampus(campus: CampusInfo) {
+        try {
+            // Format geo uri: with exact coordinates if available, query address as label
+            val cleanAddr = campus.address.replace("\n", ", ")
+            val encAddr = URLEncoder.encode("${campus.name}, $cleanAddr", "UTF-8")
+            val geoUriStr = if (campus.latitude != null && campus.longitude != null) {
+                "geo:${campus.latitude},${campus.longitude}?q=${campus.latitude},${campus.longitude}($encAddr)"
+            } else {
+                "geo:0,0?q=$encAddr"
+            }
+
+            val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUriStr))
+            if (mapIntent.resolveActivity(packageManager) != null) {
+                startActivity(mapIntent)
+            } else {
+                // Fallback to web browser (Google Maps web)
+                val webMapsUrl = if (campus.latitude != null && campus.longitude != null) {
+                    "https://www.google.com/maps/search/?api=1&query=${campus.latitude},${campus.longitude}"
+                } else {
+                    "https://www.google.com/maps/search/?api=1&query=$encAddr"
+                }
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webMapsUrl)))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MyeFossCampus", "Error launching navigation app: ${e.message}", e)
+            Toast.makeText(this, "Impossible d'ouvrir une application de cartographie", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun fetchCampusesFromApi(): List<CampusInfo> {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/campus") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val urlsToTry = listOf(
+            "https://www.myefrei.fr/api/rest/student/campus",
+            "https://www.myefrei.fr/api/rest/campus"
+        )
+
+        for (urlStr in urlsToTry) {
+            try {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    android.util.Log.d("MyeFossCampus", "Campus response ($code): $response")
+                    val parsed = parseCampusesResponse(response)
+                    if (parsed.isNotEmpty()) {
+                        return parsed
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MyeFossCampus", "Exception querying campus api $urlStr: ${e.message}")
+            }
+        }
+
+        return emptyList()
+    }
+
+    private fun parseCampusesResponse(response: String): List<CampusInfo> {
+        val list = mutableListOf<CampusInfo>()
+        try {
+            val trimmed = response.trim()
+            val jsonArray = if (trimmed.startsWith("[")) {
+                JSONArray(trimmed)
+            } else if (trimmed.startsWith("{")) {
+                val root = JSONObject(trimmed)
+                root.optJSONArray("campuses") ?: root.optJSONArray("data") ?: root.optJSONArray("items")
+            } else null
+
+            if (jsonArray != null) {
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.optJSONObject(i) ?: continue
+                    val name = obj.optString("name", obj.optString("campusName", obj.optString("title", "")))
+                    val city = obj.optString("city", obj.optString("ville", ""))
+                    val address = obj.optString("address", obj.optString("adresse", obj.optString("street", "")))
+                    val postalCode = obj.optString("postalCode", obj.optString("zipCode", obj.optString("codePostal", "")))
+                    val sites = obj.optString("sites", obj.optString("description", obj.optString("sitesDescription", "")))
+                    val lat = when {
+                        obj.has("latitude") -> obj.optDouble("latitude")
+                        obj.has("lat") -> obj.optDouble("lat")
+                        else -> null
+                    }
+                    val lon = when {
+                        obj.has("longitude") -> obj.optDouble("longitude")
+                        obj.has("lng") || obj.has("lon") -> obj.optDouble(if (obj.has("lng")) "lng" else "lon")
+                        else -> null
+                    }
+
+                    if (name.isNotBlank() && (address.isNotBlank() || city.isNotBlank())) {
+                        list.add(
+                            CampusInfo(
+                                id = obj.optString("id", i.toString()),
+                                name = name,
+                                city = city,
+                                address = address,
+                                postalCode = postalCode.ifBlank { null },
+                                sitesDescription = sites.ifBlank { null },
+                                latitude = lat,
+                                longitude = lon
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
 
     private fun updateExpandState() {
         if (isMonthExpanded) {
@@ -2168,7 +2443,7 @@ class MainActivity : AppCompatActivity() {
             showScolarityTab()
             return
         }
-        if (tabContainerSettings.visibility == View.VISIBLE) {
+        if (tabContainerSettings.visibility == View.VISIBLE || tabContainerCampus.visibility == View.VISIBLE) {
             showPlanningTab()
             return
         }

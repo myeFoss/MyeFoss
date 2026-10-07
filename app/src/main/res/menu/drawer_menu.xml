@@ -17,6 +17,10 @@
             android:icon="@drawable/ic_book"
             android:title="LXP / E-learning" />
         <item
+            android:id="@+id/drawer_campus"
+            android:icon="@drawable/ic_location"
+            android:title="Campus" />
+        <item
             android:id="@+id/drawer_settings"
             android:icon="@drawable/ic_settings"
             android:title="Paramètres" />
