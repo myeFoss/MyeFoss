@@ -1477,7 +1477,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="sans-serif-bold"
-                                    android:text="Sites et Adresses"
+                                    android:text="Campus et Sites"
                                     android:textColor="?attr/colorPrimary"
                                     android:textSize="14sp"
                                     android:layout_marginBottom="12dp" />
@@ -1497,7 +1497,7 @@
                                     android:layout_marginBottom="16dp"
                                     android:gravity="center"
                                     android:lineSpacingExtra="3dp"
-                                    android:text="Cliquez sur Itinéraire pour lancer votre application de cartographie préférée."
+                                    android:text="Touchez une carte pour voir les détails (gardien, horaires, accès).\nCliquez sur « Y aller » pour choisir votre application GPS."
                                     android:textColor="?attr/colorOutline"
                                     android:textSize="11sp" />
 

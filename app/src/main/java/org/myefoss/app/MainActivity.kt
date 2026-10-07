@@ -1666,25 +1666,90 @@ class MainActivity : AppCompatActivity() {
 
     private fun getDefaultCampuses(): List<CampusInfo> {
         return listOf(
+            // Campus Bordeaux
             CampusInfo(
-                id = "villejuif",
-                name = "Campus Paris - Villejuif",
-                city = "Villejuif",
-                address = "30-32 Avenue de la République\n94800 Villejuif",
-                postalCode = "94800",
-                sitesDescription = "Sites : Bâtiments A & B, L'Aquarium (136 Bd Maxime Gorki), La Factory",
-                latitude = 48.788591,
-                longitude = 2.363765
-            ),
-            CampusInfo(
-                id = "bordeaux",
+                id = "bordeaux_main",
                 name = "Campus Bordeaux",
                 city = "Bordeaux",
                 address = "83 Rue Lucien Faure\n33000 Bordeaux",
                 postalCode = "33000",
-                sitesDescription = "Site : Bassins à flot (prochainement Quartier Tivoli / Rue de Macau)",
+                campusGroup = "Bordeaux",
+                sitesDescription = "Site Bassins à flot (Bâtiment BDX)",
                 latitude = 44.861783,
-                longitude = -0.555776
+                longitude = -0.555776,
+                phone = "05 82 06 01 62",
+                caretakerPhone = "05 82 06 01 62",
+                hours = "Lundi au Vendredi : 08h00 - 19h00\nFermé le week-end",
+                accessTransport = "Tram B (Arrêt Rue Achard ou Cité du Vin), Bus 7, 32",
+                description = "Campus régional de Nouvelle-Aquitaine, salles de cours, laboratoires informatiques, espaces de co-working et vie étudiante."
+            ),
+            // Campus Paris - Site La Maison
+            CampusInfo(
+                id = "paris_maison",
+                name = "La Maison (Bâtiments A & B)",
+                city = "Villejuif",
+                address = "30-32 Avenue de la République\n94800 Villejuif",
+                postalCode = "94800",
+                campusGroup = "Paris",
+                sitesDescription = "Site historique, amphis, scolarité, associations",
+                latitude = 48.788591,
+                longitude = 2.363765,
+                phone = "01 88 28 90 00",
+                caretakerPhone = "01 88 28 90 01",
+                hours = "Lundi au Vendredi : 07h30 - 21h00\nSamedi : 08h00 - 13h00",
+                accessTransport = "Métro 7 (Villejuif Louis Aragon), Tramway T7, Bus 131, 172",
+                description = "Site historique principal regroupant les amphis, les bureaux de la scolarité et de l'administration, le pôle innovation et les associations étudiantes."
+            ),
+            // Campus Paris - Site L'Aquarium
+            CampusInfo(
+                id = "paris_aquarium",
+                name = "L'Aquarium",
+                city = "Villejuif",
+                address = "136 bis Boulevard Maxime Gorki\n94800 Villejuif",
+                postalCode = "94800",
+                campusGroup = "Paris",
+                sitesDescription = "Langues, Sciences Humaines, amphis et salles TD",
+                latitude = 48.785420,
+                longitude = 2.365310,
+                phone = "01 88 28 90 00",
+                caretakerPhone = "01 88 28 90 01",
+                hours = "Lundi au Vendredi : 07h30 - 20h00\nFermé le week-end",
+                accessTransport = "Métro 7 (Villejuif Paul Vaillant-Couturier ou Louis Aragon), Bus 131, 162",
+                description = "Site dédié à l'enseignement des langues vivantes, de la communication, des sciences humaines et du management."
+            ),
+            // Campus Paris - Site La Factory
+            CampusInfo(
+                id = "paris_factory",
+                name = "La Factory",
+                city = "Villejuif",
+                address = "143 Boulevard Maxime Gorki\n94800 Villejuif",
+                postalCode = "94800",
+                campusGroup = "Paris",
+                sitesDescription = "Travaux collaboratifs, projets de groupe et tech",
+                latitude = 48.784950,
+                longitude = 2.365820,
+                phone = "01 88 28 90 00",
+                caretakerPhone = "01 88 28 90 01",
+                hours = "Lundi au Vendredi : 08h00 - 20h00\nFermé le week-end",
+                accessTransport = "Métro 7 (Villejuif Paul Vaillant-Couturier ou Louis Aragon)",
+                description = "Espace collaboratif moderne axé sur les projets étudiants, les labs informatiques et les hackathons."
+            ),
+            // Campus Paris - Site New Republic
+            CampusInfo(
+                id = "paris_new_republic",
+                name = "New Republic",
+                city = "Villejuif",
+                address = "11 Avenue de la République\n94800 Villejuif",
+                postalCode = "94800",
+                campusGroup = "Paris",
+                sitesDescription = "Efrei Research Lab, salles de cours et recherche",
+                latitude = 48.790120,
+                longitude = 2.362140,
+                phone = "01 88 28 90 00",
+                caretakerPhone = "01 88 28 90 01",
+                hours = "Lundi au Vendredi : 08h00 - 19h30\nFermé le week-end",
+                accessTransport = "Métro 7 (Villejuif Louis Aragon), Bus 131, 172",
+                description = "Bâtiment moderne abritant les laboratoires de recherche de l'école (Efrei Research Lab) ainsi que des salles de cours spécialisées."
             )
         )
     }
@@ -1723,51 +1788,93 @@ class MainActivity : AppCompatActivity() {
         layoutCampusList.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
-        tvCampusCountSubtitle.text = "${campuses.size} campus en France"
+        val groups = campuses.groupBy { it.campusGroup }
+        val totalSites = campuses.size
+        tvCampusCountSubtitle.text = "$totalSites sites et bâtiments répertoriés"
 
-        campuses.forEach { campus ->
-            val view = inflater.inflate(R.layout.item_campus_card, layoutCampusList, false)
-            val tvName: TextView = view.findViewById(R.id.tvCampusName)
-            val tvCity: TextView = view.findViewById(R.id.tvCampusCity)
-            val tvAddress: TextView = view.findViewById(R.id.tvCampusAddress)
-            val tvSites: TextView = view.findViewById(R.id.tvCampusSites)
-            val btnNavigate: MaterialButton = view.findViewById(R.id.btnNavigateCampus)
+        // Desired display order: Campus Bordeaux first, then Campus Paris
+        val orderedGroupKeys = listOf("Bordeaux", "Paris") + groups.keys.filter { it != "Bordeaux" && it != "Paris" }
 
-            tvName.text = campus.name
-            tvCity.text = if (!campus.postalCode.isNullOrBlank()) "${campus.city} (${campus.postalCode})" else campus.city
-            tvAddress.text = campus.address
+        for (groupName in orderedGroupKeys) {
+            val groupCampuses = groups[groupName] ?: continue
+            if (groupCampuses.isEmpty()) continue
 
-            if (!campus.sitesDescription.isNullOrBlank()) {
-                tvSites.text = campus.sitesDescription
-                tvSites.visibility = View.VISIBLE
-            } else {
-                tvSites.visibility = View.GONE
+            // Section Header for each Campus Group (e.g. "Campus Bordeaux", "Campus Paris")
+            val headerTv = TextView(this).apply {
+                text = "Campus $groupName"
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                val typedValue = android.util.TypedValue()
+                if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)) {
+                    setTextColor(typedValue.data)
+                }
+                setPadding(4, 16, 4, 10)
             }
+            layoutCampusList.addView(headerTv)
 
-            btnNavigate.setOnClickListener {
-                openNavigationForCampus(campus)
+            groupCampuses.forEach { campus ->
+                val view = inflater.inflate(R.layout.item_campus_card, layoutCampusList, false)
+                val tvName: TextView = view.findViewById(R.id.tvCampusName)
+                val tvSubtitle: TextView = view.findViewById(R.id.tvCampusSubtitle)
+                val tvAddress: TextView = view.findViewById(R.id.tvCampusAddress)
+                val tvSites: TextView = view.findViewById(R.id.tvCampusSites)
+                val btnNavigate: MaterialButton = view.findViewById(R.id.btnNavigateCampus)
+
+                tvName.text = campus.name
+                val cityText = if (!campus.postalCode.isNullOrBlank()) "${campus.city} (${campus.postalCode})" else campus.city
+                tvSubtitle.text = cityText
+                tvAddress.text = campus.address.replace("\n", ", ")
+
+                if (!campus.sitesDescription.isNullOrBlank()) {
+                    tvSites.text = campus.sitesDescription
+                    tvSites.visibility = View.VISIBLE
+                } else {
+                    tvSites.visibility = View.GONE
+                }
+
+                // Clicking the tile opens bottom sheet with complete details (caretaker, phone, hours, access)
+                view.setOnClickListener {
+                    CampusDetailsBottomSheet.newInstance(campus) { selectedCampus ->
+                        openNavigationForCampus(selectedCampus)
+                    }.show(supportFragmentManager, "CampusDetails_${campus.id}")
+                }
+
+                // Clicking "Y aller" triggers navigation app chooser directly
+                btnNavigate.setOnClickListener {
+                    openNavigationForCampus(campus)
+                }
+
+                layoutCampusList.addView(view)
             }
-
-            layoutCampusList.addView(view)
         }
     }
 
     private fun openNavigationForCampus(campus: CampusInfo) {
         try {
-            // Format geo uri: with exact coordinates if available, query address as label
             val cleanAddr = campus.address.replace("\n", ", ")
-            val encAddr = URLEncoder.encode("${campus.name}, $cleanAddr", "UTF-8")
-            val geoUriStr = if (campus.latitude != null && campus.longitude != null) {
-                "geo:${campus.latitude},${campus.longitude}?q=${campus.latitude},${campus.longitude}($encAddr)"
+            val label = "${campus.name}, $cleanAddr"
+            val encAddr = URLEncoder.encode(label, "UTF-8")
+
+            // Prefer coordinates if available, query label as destination
+            val geoUri = if (campus.latitude != null && campus.longitude != null) {
+                Uri.parse("geo:${campus.latitude},${campus.longitude}?q=${campus.latitude},${campus.longitude}($encAddr)")
             } else {
-                "geo:0,0?q=$encAddr"
+                Uri.parse("geo:0,0?q=$encAddr")
             }
 
-            val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUriStr))
+            // Create ACTION_VIEW intent for map applications
+            val mapIntent = Intent(Intent.ACTION_VIEW, geoUri)
+
+            // Let the user choose between installed navigation apps (Google Maps, Waze, Citymapper, OsmAnd, etc.)
+            val chooserTitle = "Choisir une application de navigation"
+            val chooserIntent = Intent.createChooser(mapIntent, chooserTitle).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
             if (mapIntent.resolveActivity(packageManager) != null) {
-                startActivity(mapIntent)
+                startActivity(chooserIntent)
             } else {
-                // Fallback to web browser (Google Maps web)
+                // Fallback to web browser (Google Maps web search)
                 val webMapsUrl = if (campus.latitude != null && campus.longitude != null) {
                     "https://www.google.com/maps/search/?api=1&query=${campus.latitude},${campus.longitude}"
                 } else {
@@ -1853,6 +1960,12 @@ class MainActivity : AppCompatActivity() {
                     val address = obj.optString("address", obj.optString("adresse", obj.optString("street", "")))
                     val postalCode = obj.optString("postalCode", obj.optString("zipCode", obj.optString("codePostal", "")))
                     val sites = obj.optString("sites", obj.optString("description", obj.optString("sitesDescription", "")))
+                    val phone = obj.optString("phone", obj.optString("telephone", ""))
+                    val caretakerPhone = obj.optString("caretakerPhone", obj.optString("gardien", ""))
+                    val hours = obj.optString("hours", obj.optString("horaires", ""))
+                    val access = obj.optString("access", obj.optString("transports", ""))
+                    val group = obj.optString("group", obj.optString("campusGroup", if (city.contains("Bordeaux", ignoreCase = true) || name.contains("Bordeaux", ignoreCase = true)) "Bordeaux" else "Paris"))
+
                     val lat = when {
                         obj.has("latitude") -> obj.optDouble("latitude")
                         obj.has("lat") -> obj.optDouble("lat")
@@ -1874,7 +1987,12 @@ class MainActivity : AppCompatActivity() {
                                 postalCode = postalCode.ifBlank { null },
                                 sitesDescription = sites.ifBlank { null },
                                 latitude = lat,
-                                longitude = lon
+                                longitude = lon,
+                                campusGroup = group,
+                                phone = phone.ifBlank { null },
+                                caretakerPhone = caretakerPhone.ifBlank { null },
+                                hours = hours.ifBlank { null },
+                                accessTransport = access.ifBlank { null }
                             )
                         )
                     }

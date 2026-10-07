@@ -251,6 +251,13 @@ object OfflineCacheManager {
                     c.sitesDescription?.let { put("sitesDescription", it) }
                     c.latitude?.let { put("latitude", it) }
                     c.longitude?.let { put("longitude", it) }
+                    put("campusGroup", c.campusGroup)
+                    c.phone?.let { put("phone", it) }
+                    c.caretakerPhone?.let { put("caretakerPhone", it) }
+                    c.hours?.let { put("hours", it) }
+                    c.email?.let { put("email", it) }
+                    c.accessTransport?.let { put("accessTransport", it) }
+                    c.description?.let { put("description", it) }
                 }
                 jsonArray.put(obj)
             }
@@ -278,7 +285,14 @@ object OfflineCacheManager {
                         postalCode = if (obj.has("postalCode")) obj.optString("postalCode") else null,
                         sitesDescription = if (obj.has("sitesDescription")) obj.optString("sitesDescription") else null,
                         latitude = if (obj.has("latitude")) obj.optDouble("latitude") else null,
-                        longitude = if (obj.has("longitude")) obj.optDouble("longitude") else null
+                        longitude = if (obj.has("longitude")) obj.optDouble("longitude") else null,
+                        campusGroup = obj.optString("campusGroup", if (obj.optString("city").contains("Bordeaux", ignoreCase = true)) "Bordeaux" else "Paris"),
+                        phone = if (obj.has("phone")) obj.optString("phone") else null,
+                        caretakerPhone = if (obj.has("caretakerPhone")) obj.optString("caretakerPhone") else null,
+                        hours = if (obj.has("hours")) obj.optString("hours") else null,
+                        email = if (obj.has("email")) obj.optString("email") else null,
+                        accessTransport = if (obj.has("accessTransport")) obj.optString("accessTransport") else null,
+                        description = if (obj.has("description")) obj.optString("description") else null
                     )
                 )
             }
@@ -338,6 +352,13 @@ data class CampusInfo(
     val postalCode: String? = null,
     val sitesDescription: String? = null,
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val campusGroup: String = "Paris",
+    val phone: String? = null,
+    val caretakerPhone: String? = null,
+    val hours: String? = null,
+    val email: String? = null,
+    val accessTransport: String? = null,
+    val description: String? = null
 )
 
