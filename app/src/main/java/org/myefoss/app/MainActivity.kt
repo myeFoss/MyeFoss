@@ -1164,9 +1164,13 @@ class MainActivity : AppCompatActivity() {
         var totalMinutes = 0
         absences.forEach { abs ->
             val hParts = abs.hours.lowercase().replace("h", ":").split(":")
-            val h = hParts.getOrNull(0)?.trim()?.toIntOrNull() ?: 1
-            val m = hParts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
-            totalMinutes += (h * 60) + m
+            if (hParts.isNotEmpty()) {
+                val h = hParts.getOrNull(0)?.trim()?.toIntOrNull()
+                val m = hParts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+                if (h != null) {
+                    totalMinutes += (h * 60) + m
+                }
+            }
         }
         val displayH = totalMinutes / 60
         val displayM = totalMinutes % 60
@@ -1346,42 +1350,145 @@ class MainActivity : AppCompatActivity() {
                 obj.has("absenceType") || obj.has("sessionType") || obj.has("missed")
 
         if (courseName.isNotBlank() && (rawDate.isNotBlank() || hasDuration || hasAbsenceMarkers)) {
-            val dateStr = if (rawDate.length >= 10 && rawDate.contains("T")) {
-                val isoDate = rawDate.substring(0, 10)
-                try {
-                    val inFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            fun parseDateToFrenchString(dStr: String): String {
+                if (dStr.isBlank()) return "Date inconnue"
+                // Try timestamp in milliseconds
+                val timestamp = dStr.toLongOrNull()
+                if (timestamp != null && timestamp > 100000000000L) {
                     val outFmt = SimpleDateFormat("dd MMM yyyy", Locale.FRANCE)
-                    val d = inFmt.parse(isoDate)
-                    if (d != null) outFmt.format(d) else isoDate
-                } catch (e: Exception) {
-                    isoDate
+                    return outFmt.format(Date(timestamp))
                 }
-            } else if (rawDate.isNotBlank()) {
-                rawDate
-            } else {
-                "Date inconnue"
+                // Try ISO 8601 strings (e.g. 2024-10-12 or 2024-10-12T08:30:00.000Z)
+                if (dStr.length >= 10 && (dStr[4] == '-' || dStr[4] == '/')) {
+                    val cleanDate = dStr.substring(0, 10).replace('/', '-')
+                    try {
+                        val inFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                        val outFmt = SimpleDateFormat("dd MMM yyyy", Locale.FRANCE)
+                        val d = inFmt.parse(cleanDate)
+                        if (d != null) return outFmt.format(d)
+                    } catch (e: Exception) {}
+                }
+                // Try dd/MM/yyyy format
+                if (dStr.length >= 10 && (dStr[2] == '/' || dStr[2] == '-')) {
+                    val cleanDate = dStr.substring(0, 10).replace('-', '/')
+                    try {
+                        val inFmt = SimpleDateFormat("dd/MM/yyyy", Locale.FRANCE)
+                        val outFmt = SimpleDateFormat("dd MMM yyyy", Locale.FRANCE)
+                        val d = inFmt.parse(cleanDate)
+                        if (d != null) return outFmt.format(d)
+                    } catch (e: Exception) {}
+                }
+                return dStr
             }
 
-            var hoursStr = obj.optString("hours",
-                obj.optString("duration",
-                obj.optString("nbHours",
-                obj.optString("totalHours", ""))))
+            fun formatMinutes(totalM: Int): String {
+                val h = totalM / 60
+                val m = totalM % 60
+                return if (m > 0) "${h}h${String.format(Locale.FRANCE, "%02d", m)}" else "${h}h"
+            }
 
+            fun formatDoubleHours(dh: Double): String {
+                val totalM = (dh * 60.0).toInt()
+                return formatMinutes(totalM)
+            }
+
+            fun parseTimeToMinutes(tStr: String): Int? {
+                val clean = tStr.trim().lowercase().replace('h', ':')
+                val parts = clean.split(':')
+                if (parts.size >= 2) {
+                    val h = parts[0].toIntOrNull() ?: return null
+                    val m = parts[1].toIntOrNull() ?: 0
+                    return (h * 60) + m
+                }
+                return null
+            }
+
+            val dateStr = parseDateToFrenchString(rawDate)
+
+            // Duration extraction with variable duration priority
+            var hoursStr = ""
+
+            // 1. Check direct minutes numeric fields
+            val durationMin = when {
+                obj.has("durationInMinutes") -> obj.optInt("durationInMinutes", -1)
+                obj.has("durationMinutes") -> obj.optInt("durationMinutes", -1)
+                obj.has("nbMinutes") -> obj.optInt("nbMinutes", -1)
+                obj.has("lateDurationInMinutes") -> obj.optInt("lateDurationInMinutes", -1)
+                obj.has("lateMinutes") -> obj.optInt("lateMinutes", -1)
+                else -> -1
+            }
+            if (durationMin > 0) {
+                hoursStr = formatMinutes(durationMin)
+            }
+
+            // 2. Check numeric duration or hours (e.g. 1.5, 3.5, 2)
             if (hoursStr.isBlank()) {
-                val durationMin = obj.optInt("durationInMinutes", obj.optInt("lateDurationInMinutes", -1))
-                if (durationMin > 0) {
-                    val h = durationMin / 60
-                    val m = durationMin % 60
-                    hoursStr = if (m > 0) "${h}h${String.format(Locale.FRANCE, "%02d", m)}" else "${h}h"
-                } else {
-                    val startTime = obj.optString("startTime", "")
-                    val endTime = obj.optString("endTime", "")
-                    hoursStr = if (startTime.isNotBlank() && endTime.isNotBlank()) {
-                        "$startTime - $endTime"
+                val doubleH = when {
+                    obj.has("duration") && obj.optDouble("duration", -1.0) > 0 -> obj.optDouble("duration", -1.0)
+                    obj.has("hours") && obj.optDouble("hours", -1.0) > 0 -> obj.optDouble("hours", -1.0)
+                    obj.has("nbHours") && obj.optDouble("nbHours", -1.0) > 0 -> obj.optDouble("nbHours", -1.0)
+                    obj.has("totalHours") && obj.optDouble("totalHours", -1.0) > 0 -> obj.optDouble("totalHours", -1.0)
+                    else -> -1.0
+                }
+                if (doubleH > 0) {
+                    hoursStr = formatDoubleHours(doubleH)
+                }
+            }
+
+            // 3. Check string hours/duration (e.g. "1h30", "03:30", "2.0")
+            if (hoursStr.isBlank()) {
+                val rawHours = obj.optString("hours",
+                    obj.optString("duration",
+                    obj.optString("nbHours",
+                    obj.optString("totalHours", "")))).trim()
+                if (rawHours.isNotBlank()) {
+                    val rawDouble = rawHours.toDoubleOrNull()
+                    if (rawDouble != null && rawDouble > 0) {
+                        hoursStr = formatDoubleHours(rawDouble)
                     } else {
-                        "1h30"
+                        val mParsed = parseTimeToMinutes(rawHours)
+                        if (mParsed != null && mParsed > 0) {
+                            hoursStr = formatMinutes(mParsed)
+                        } else {
+                            hoursStr = rawHours
+                        }
                     }
                 }
+            }
+
+            // 4. Calculate duration from startTime and endTime (e.g. "08:30" and "12:00")
+            if (hoursStr.isBlank()) {
+                val startTime = obj.optString("startTime", obj.optString("startHour", ""))
+                val endTime = obj.optString("endTime", obj.optString("endHour", ""))
+                val startM = parseTimeToMinutes(startTime)
+                val endM = parseTimeToMinutes(endTime)
+                if (startM != null && endM != null && endM > startM) {
+                    hoursStr = formatMinutes(endM - startM)
+                }
+            }
+
+            // 5. Calculate duration from ISO start and end (e.g. "2024-10-12T08:30:00Z" and "2024-10-12T12:00:00Z")
+            if (hoursStr.isBlank()) {
+                val startIso = obj.optString("start", obj.optString("startDate", ""))
+                val endIso = obj.optString("end", obj.optString("endDate", ""))
+                if (startIso.length >= 19 && endIso.length >= 19) {
+                    try {
+                        val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                            timeZone = TimeZone.getTimeZone("UTC")
+                        }
+                        val d1 = isoFmt.parse(startIso.substring(0, 19))
+                        val d2 = isoFmt.parse(endIso.substring(0, 19))
+                        if (d1 != null && d2 != null && d2.time > d1.time) {
+                            val diffM = ((d2.time - d1.time) / (1000 * 60)).toInt()
+                            hoursStr = formatMinutes(diffM)
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+
+            // Default fallback if no duration is found anywhere
+            if (hoursStr.isBlank()) {
+                hoursStr = "Durée inconnue"
             }
 
             val isJustified = obj.optBoolean("justified",
@@ -1401,17 +1508,17 @@ class MainActivity : AppCompatActivity() {
                 obj.optString("sessionType",
                 obj.optString("activity", ""))))
 
-            outList.add(
-                StudentAbsence(
-                    id = obj.optString("id", obj.optString("_id", outList.size.toString())),
-                    courseName = courseName,
-                    date = dateStr,
-                    hours = hoursStr,
-                    justified = isJustified,
-                    type = type.ifBlank { null },
-                    reason = reason.ifBlank { null }
-                )
+            val absenceItem = StudentAbsence(
+                id = obj.optString("id", obj.optString("_id", outList.size.toString())),
+                courseName = courseName,
+                date = dateStr,
+                hours = hoursStr,
+                justified = isJustified,
+                type = type.ifBlank { null },
+                reason = reason.ifBlank { null }
             )
+            android.util.Log.d("MyeFossAbsences", "Extracted: course='$courseName', date='$dateStr' (raw='$rawDate'), duration='$hoursStr', justified=$isJustified, rawKeys=${obj.keys().asSequence().toList()}")
+            outList.add(absenceItem)
         }
 
         val keys = obj.keys()

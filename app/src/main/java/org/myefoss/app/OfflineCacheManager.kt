@@ -175,7 +175,7 @@ object OfflineCacheManager {
                         id = obj.optString("id", i.toString()),
                         courseName = obj.optString("courseName", "Cours"),
                         date = obj.optString("date", ""),
-                        hours = obj.optString("hours", "1h30"),
+                        hours = obj.optString("hours", "Durée inconnue"),
                         justified = obj.optBoolean("justified", false),
                         type = if (obj.has("type")) obj.optString("type") else null,
                         reason = if (obj.has("reason")) obj.optString("reason") else null
