@@ -4,10 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -80,6 +83,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutLxpEmpty: LinearLayout
     private lateinit var tvLxpSubtitle: TextView
     private lateinit var tvLxpEmptyMessage: TextView
+    private lateinit var btnHeaderOpenCatalog: MaterialButton
+    private lateinit var btnOpenLxpCatalog: MaterialButton
+    private lateinit var btnRetryLxp: MaterialButton
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
@@ -267,6 +273,9 @@ class MainActivity : AppCompatActivity() {
         layoutLxpEmpty = findViewById(R.id.layoutLxpEmpty)
         tvLxpSubtitle = findViewById(R.id.tvLxpSubtitle)
         tvLxpEmptyMessage = findViewById(R.id.tvLxpEmptyMessage)
+        btnHeaderOpenCatalog = findViewById(R.id.btnHeaderOpenCatalog)
+        btnOpenLxpCatalog = findViewById(R.id.btnOpenLxpCatalog)
+        btnRetryLxp = findViewById(R.id.btnRetryLxp)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
@@ -464,6 +473,18 @@ class MainActivity : AppCompatActivity() {
 
         swipeRefreshLxp.setOnRefreshListener {
             loadLxpActions(isSwipe = true)
+        }
+
+        btnHeaderOpenCatalog.setOnClickListener {
+            openLxpWebCatalog()
+        }
+
+        btnOpenLxpCatalog.setOnClickListener {
+            openLxpWebCatalog()
+        }
+
+        btnRetryLxp.setOnClickListener {
+            loadLxpActions(isSwipe = false)
         }
 
         setupThemeSettings()
@@ -2058,9 +2079,7 @@ class MainActivity : AppCompatActivity() {
         // 2. Fetch fresh actions in background
         lifecycleScope.launch {
             try {
-                val fresh = withContext(Dispatchers.IO) {
-                    fetchLxpActionsFromApi()
-                }
+                val fresh = fetchLxpActionsFromApi()
                 layoutLxpLoading.visibility = View.GONE
                 if (fresh.isNotEmpty()) {
                     OfflineCacheManager.saveLxpActions(this@MainActivity, fresh)
@@ -2174,7 +2193,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchLxpActionsFromApi(): List<LxpAction> {
+    private fun openLxpWebCatalog() {
+        val catalogUrl = "https://www.myefrei.fr/portal/student/lxp/catalog/"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(catalogUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossible d'ouvrir le catalogue LXP", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun fetchLxpActionsFromApi(): List<LxpAction> {
+        // Step 1: Direct HTTP endpoints (REST / HTML)
+        val httpActions = withContext(Dispatchers.IO) {
+            fetchLxpFromHttp()
+        }
+        if (httpActions.isNotEmpty()) {
+            return httpActions
+        }
+
+        // Step 2: Headless WebView scraper with JavaScript execution
+        return withContext(Dispatchers.Main) {
+            fetchLxpFromHeadlessWeb()
+        }
+    }
+
+    private fun fetchLxpFromHttp(): List<LxpAction> {
         val cookieManager = CookieManager.getInstance()
         val directCookies = cookieManager.getCookie("https://www.myefrei.fr/portal/student/lxp") ?: ""
         val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
@@ -2199,6 +2245,8 @@ class MainActivity : AppCompatActivity() {
         val endpointsToTry = listOf(
             "https://www.myefrei.fr/api/rest/student/lxp/catalog",
             "https://www.myefrei.fr/api/rest/student/lxp",
+            "https://www.myefrei.fr/api/rest/student/lxp/actions",
+            "https://www.myefrei.fr/api/rest/student/catalog",
             "https://www.myefrei.fr/portal/student/lxp/catalog/",
             "https://www.myefrei.fr/portal/student/lxp"
         )
@@ -2206,11 +2254,12 @@ class MainActivity : AppCompatActivity() {
         for (endpoint in endpointsToTry) {
             try {
                 val conn = URL(endpoint).openConnection() as HttpURLConnection
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
+                conn.connectTimeout = 6000
+                conn.readTimeout = 6000
                 conn.instanceFollowRedirects = true
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
                 conn.setRequestProperty("Accept", "application/json, text/html, */*")
+                conn.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
                 if (mergedCookies.isNotBlank()) {
                     conn.setRequestProperty("Cookie", mergedCookies)
                 }
@@ -2220,7 +2269,6 @@ class MainActivity : AppCompatActivity() {
                     val raw = conn.inputStream.bufferedReader().use { it.readText() }
                     val trimmed = raw.trim()
 
-                    // Case A: JSON Array or Object
                     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
                         val parsed = parseLxpJson(trimmed)
                         if (parsed.isNotEmpty()) {
@@ -2229,7 +2277,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                    // Case B: HTML page with catalog items or embedded Next.js JSON
                     val fromHtml = parseLxpFromHtml(trimmed)
                     if (fromHtml.isNotEmpty()) {
                         list.addAll(fromHtml)
@@ -2237,28 +2284,146 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                // Continue to next endpoint fallback
+                // Ignore and continue to next endpoint
             }
         }
         return list
     }
 
+    private suspend fun fetchLxpFromHeadlessWeb(): List<LxpAction> = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        try {
+            var resumed = false
+            val webView = WebView(this@MainActivity)
+
+            fun finish(result: List<LxpAction>) {
+                if (!resumed) {
+                    resumed = true
+                    try {
+                        webView.stopLoading()
+                        webView.destroy()
+                    } catch (e: Exception) {}
+                    if (cont.isActive) {
+                        cont.resume(result, onCancellation = null)
+                    }
+                }
+            }
+
+            // Safety timeout after 8 seconds
+            val timeoutHandler = Handler(Looper.getMainLooper())
+            val timeoutRunnable = Runnable {
+                finish(emptyList())
+            }
+            timeoutHandler.postDelayed(timeoutRunnable, 8000)
+
+            cont.invokeOnCancellation {
+                timeoutHandler.removeCallbacks(timeoutRunnable)
+                try {
+                    webView.stopLoading()
+                    webView.destroy()
+                } catch (e: Exception) {}
+            }
+
+            val settings = webView.settings
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+
+            class LxpJsBridge {
+                @JavascriptInterface
+                fun onScraped(jsonStr: String) {
+                    timeoutHandler.removeCallbacks(timeoutRunnable)
+                    Handler(Looper.getMainLooper()).post {
+                        val actions = parseLxpJson(jsonStr)
+                        finish(actions)
+                    }
+                }
+            }
+
+            webView.addJavascriptInterface(LxpJsBridge(), "LxpBridge")
+
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    timeoutHandler.postDelayed({
+                        if (!resumed) {
+                            executeLxpExtractorScript(webView)
+                        }
+                    }, 1800)
+                }
+            }
+
+            webView.loadUrl("https://www.myefrei.fr/portal/student/lxp")
+        } catch (e: Exception) {
+            if (cont.isActive) {
+                cont.resume(emptyList(), onCancellation = null)
+            }
+        }
+    }
+
+    private fun executeLxpExtractorScript(webView: WebView) {
+        val js = """
+            (function() {
+                try {
+                    // 1. Next.js props inspection
+                    var nextData = document.getElementById('__NEXT_DATA__');
+                    if (nextData) {
+                        try {
+                            var json = JSON.parse(nextData.textContent);
+                            var props = json.props && json.props.pageProps;
+                            if (props) {
+                                window.LxpBridge.onScraped(JSON.stringify(props));
+                                return;
+                            }
+                        } catch(e) {}
+                    }
+
+                    // 2. DOM elements inspection for cards / suggested actions
+                    var items = [];
+                    var elements = document.querySelectorAll('div[class*="card"], div[class*="action"], tr, a[href*="lxp"], div[role="listitem"]');
+                    elements.forEach(function(el, i) {
+                        var h = el.querySelector('h1, h2, h3, h4, h5, h6, strong, b');
+                        if (h && h.innerText && h.innerText.length > 2) {
+                            var title = h.innerText.trim();
+                            var fullText = el.innerText || '';
+                            var link = el.getAttribute('href') || (el.querySelector('a') ? el.querySelector('a').getAttribute('href') : '');
+                            items.push({
+                                id: 'item_' + i,
+                                title: title,
+                                description: fullText.replace(title, '').trim().substring(0, 200),
+                                detailUrl: link || '',
+                                canRegister: true
+                            });
+                        }
+                    });
+
+                    window.LxpBridge.onScraped(JSON.stringify(items));
+                } catch(e) {
+                    window.LxpBridge.onScraped("[]");
+                }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
+
     private fun parseLxpJson(rawJson: String): List<LxpAction> {
         val list = mutableListOf<LxpAction>()
         try {
-            if (rawJson.startsWith("[")) {
-                val array = JSONArray(rawJson)
+            val trimmed = rawJson.trim()
+            if (trimmed.startsWith("[")) {
+                val array = JSONArray(trimmed)
                 for (i in 0 until array.length()) {
                     val obj = array.optJSONObject(i) ?: continue
                     list.add(LxpAction.fromJson(obj))
                 }
-            } else if (rawJson.startsWith("{")) {
-                val obj = JSONObject(rawJson)
+            } else if (trimmed.startsWith("{")) {
+                val obj = JSONObject(trimmed)
                 val array = obj.optJSONArray("actions")
                     ?: obj.optJSONArray("data")
                     ?: obj.optJSONArray("items")
                     ?: obj.optJSONArray("catalog")
                     ?: obj.optJSONArray("courses")
+                    ?: obj.optJSONArray("suggestedActions")
                 if (array != null) {
                     for (i in 0 until array.length()) {
                         val item = array.optJSONObject(i) ?: continue
@@ -2267,7 +2432,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            // Ignore parse errors
+            // Ignore
         }
         return list
     }
@@ -2275,7 +2440,6 @@ class MainActivity : AppCompatActivity() {
     private fun parseLxpFromHtml(html: String): List<LxpAction> {
         val list = mutableListOf<LxpAction>()
         try {
-            // 1. Look for embedded NEXT_DATA JSON
             val nextDataRegex = Regex("<script id=\"__NEXT_DATA__\" type=\"application/json\">([\\s\\S]*?)</script>")
             val match = nextDataRegex.find(html)
             if (match != null) {
@@ -2287,29 +2451,8 @@ class MainActivity : AppCompatActivity() {
                     if (parsed.isNotEmpty()) return parsed
                 }
             }
-
-            // 2. Generic fallback card regex in HTML if rendered on server
-            val cardRegex = Regex("<div[^>]*class=\"[^\"]*(?:card|action|catalog-item)[^\"]*\"[\\s\\S]*?</div>\\s*</div>", RegexOption.IGNORE_CASE)
-            var idx = 0
-            cardRegex.findAll(html).forEach { m ->
-                val cardHtml = m.value
-                val titleMatch = Regex("<h[1-6][^>]*>(.*?)</h[1-6]>", RegexOption.IGNORE_CASE).find(cardHtml)
-                val title = titleMatch?.groupValues?.get(1)?.replace(Regex("<[^>]*>"), "")?.trim() ?: ""
-                if (title.isNotBlank()) {
-                    list.add(
-                        LxpAction(
-                            id = "html_$idx",
-                            title = title,
-                            description = "",
-                            category = "LXP",
-                            canRegister = true
-                        )
-                    )
-                    idx++
-                }
-            }
         } catch (e: Exception) {
-            // Ignore html parsing errors
+            // Ignore
         }
         return list
     }

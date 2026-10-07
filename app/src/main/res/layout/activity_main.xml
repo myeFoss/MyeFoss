@@ -19,81 +19,69 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Pixel / Google System App Style Floating Header Bar -->
-            <FrameLayout
+            <!-- Standard Material 3 Top App Bar (Edge-to-Edge flat header) -->
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/topAppBar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="6dp">
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorSurface"
+                app:contentInsetStart="8dp"
+                app:contentInsetEnd="8dp">
 
-                <com.google.android.material.card.MaterialCardView
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    app:cardCornerRadius="26dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutlineVariant"
-                    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
+                    <!-- Hamburger Drawer Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMenuDrawer"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_menu"
+                        app:iconSize="24dp"
+                        app:iconTint="?attr/colorOnSurface" />
+
+                    <!-- Title & Subtitle block -->
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp">
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                        <!-- Hamburger Drawer Button -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnMenuDrawer"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:icon="@drawable/ic_menu"
-                            app:iconSize="22dp"
-                            app:iconTint="?attr/colorOnSurface" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/tvToolbarTitle"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Planning"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp" />
 
-                            <TextView
-                                android:id="@+id/tvToolbarTitle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="Planning"
-                                android:textColor="?attr/colorOnSurface"
-                                android:textSize="16sp" />
-
-                            <TextView
-                                android:id="@+id/tvStudentSubtitle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="MyeFoss"
-                                android:textColor="?attr/colorOnSurfaceVariant"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <!-- Refresh Button -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRefresh"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:icon="@drawable/ic_refresh"
-                            app:iconSize="20dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
+                        <TextView
+                            android:id="@+id/tvStudentSubtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MyeFoss"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
                     </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
-            </FrameLayout>
+                    <!-- Refresh Action Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRefresh"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_refresh"
+                        app:iconSize="22dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+            </com.google.android.material.appbar.MaterialToolbar>
 
             <!-- Main Tab Container: Planning View vs Scolarity View -->
             <FrameLayout
@@ -1615,16 +1603,36 @@
                                         android:textSize="13sp" />
                                 </LinearLayout>
 
-                                <!-- Section title -->
-                                <TextView
-                                    android:id="@+id/tvLxpSectionTitle"
-                                    android:layout_width="wrap_content"
+                                <!-- Section title row with direct catalog button -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-bold"
-                                    android:text="Actions disponibles"
-                                    android:textColor="?attr/colorPrimary"
-                                    android:textSize="14sp"
-                                    android:layout_marginBottom="12dp" />
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:layout_marginBottom="12dp">
+
+                                    <TextView
+                                        android:id="@+id/tvLxpSectionTitle"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="Actions suggérées"
+                                        android:textColor="?attr/colorPrimary"
+                                        android:textSize="14sp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnHeaderOpenCatalog"
+                                        style="@style/Widget.Material3.Button.TextButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="36dp"
+                                        android:text="Voir plus"
+                                        android:textSize="12sp"
+                                        app:icon="@drawable/ic_chevron_right"
+                                        app:iconGravity="textEnd"
+                                        app:iconSize="16dp" />
+
+                                </LinearLayout>
 
                                 <!-- Container for dynamic LXP Action cards -->
                                 <LinearLayout
@@ -1659,6 +1667,34 @@
                                         android:text="Aucune action disponible pour le moment."
                                         android:textColor="?attr/colorOnSurfaceVariant"
                                         android:textSize="13sp" />
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="16dp"
+                                        android:gravity="center"
+                                        android:orientation="horizontal">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnRetryLxp"
+                                            style="@style/Widget.Material3.Button.TonalButton"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="40dp"
+                                            android:layout_marginEnd="8dp"
+                                            android:text="Réessayer"
+                                            app:icon="@drawable/ic_refresh"
+                                            app:iconSize="18dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnOpenLxpCatalog"
+                                            style="@style/Widget.Material3.Button"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="40dp"
+                                            android:text="Ouvrir le catalogue"
+                                            app:icon="@drawable/ic_book"
+                                            app:iconSize="18dp" />
+
+                                    </LinearLayout>
                                 </LinearLayout>
 
                                 <!-- Discreet Footer Hint -->
