@@ -1677,11 +1677,12 @@ class MainActivity : AppCompatActivity() {
                 sitesDescription = "Site Bassins à flot (Bâtiment BDX)",
                 latitude = 44.861783,
                 longitude = -0.555776,
-                phone = "05 82 06 01 62",
-                caretakerPhone = "05 82 06 01 62",
-                hours = "Lundi au Vendredi : 08h00 - 19h00\nFermé le week-end",
+                phone = null,
+                caretakerPhone = null,
+                hours = null,
+                email = null,
                 accessTransport = "Tram B (Arrêt Rue Achard ou Cité du Vin), Bus 7, 32",
-                description = "Campus régional de Nouvelle-Aquitaine, salles de cours, laboratoires informatiques, espaces de co-working et vie étudiante."
+                description = null
             ),
             // Campus Paris - Site La Maison
             CampusInfo(
@@ -1691,14 +1692,15 @@ class MainActivity : AppCompatActivity() {
                 address = "30-32 Avenue de la République\n94800 Villejuif",
                 postalCode = "94800",
                 campusGroup = "Paris",
-                sitesDescription = "Site historique, amphis, scolarité, associations",
+                sitesDescription = "Bâtiments A & B",
                 latitude = 48.788591,
                 longitude = 2.363765,
                 phone = "01 88 28 90 00",
                 caretakerPhone = "01 88 28 90 01",
                 hours = "Lundi au Vendredi : 07h30 - 21h00\nSamedi : 08h00 - 13h00",
+                email = null,
                 accessTransport = "Métro 7 (Villejuif Louis Aragon), Tramway T7, Bus 131, 172",
-                description = "Site historique principal regroupant les amphis, les bureaux de la scolarité et de l'administration, le pôle innovation et les associations étudiantes."
+                description = null
             ),
             // Campus Paris - Site L'Aquarium
             CampusInfo(
@@ -1708,14 +1710,15 @@ class MainActivity : AppCompatActivity() {
                 address = "136 bis Boulevard Maxime Gorki\n94800 Villejuif",
                 postalCode = "94800",
                 campusGroup = "Paris",
-                sitesDescription = "Langues, Sciences Humaines, amphis et salles TD",
+                sitesDescription = "Bâtiment Aquarium",
                 latitude = 48.785420,
                 longitude = 2.365310,
                 phone = "01 88 28 90 00",
                 caretakerPhone = "01 88 28 90 01",
-                hours = "Lundi au Vendredi : 07h30 - 20h00\nFermé le week-end",
+                hours = "Lundi au Vendredi : 07h30 - 20h00",
+                email = null,
                 accessTransport = "Métro 7 (Villejuif Paul Vaillant-Couturier ou Louis Aragon), Bus 131, 162",
-                description = "Site dédié à l'enseignement des langues vivantes, de la communication, des sciences humaines et du management."
+                description = null
             ),
             // Campus Paris - Site La Factory
             CampusInfo(
@@ -1725,14 +1728,15 @@ class MainActivity : AppCompatActivity() {
                 address = "143 Boulevard Maxime Gorki\n94800 Villejuif",
                 postalCode = "94800",
                 campusGroup = "Paris",
-                sitesDescription = "Travaux collaboratifs, projets de groupe et tech",
+                sitesDescription = "Bâtiment Factory",
                 latitude = 48.784950,
                 longitude = 2.365820,
                 phone = "01 88 28 90 00",
                 caretakerPhone = "01 88 28 90 01",
-                hours = "Lundi au Vendredi : 08h00 - 20h00\nFermé le week-end",
+                hours = "Lundi au Vendredi : 08h00 - 20h00",
+                email = null,
                 accessTransport = "Métro 7 (Villejuif Paul Vaillant-Couturier ou Louis Aragon)",
-                description = "Espace collaboratif moderne axé sur les projets étudiants, les labs informatiques et les hackathons."
+                description = null
             ),
             // Campus Paris - Site New Republic
             CampusInfo(
@@ -1742,14 +1746,15 @@ class MainActivity : AppCompatActivity() {
                 address = "11 Avenue de la République\n94800 Villejuif",
                 postalCode = "94800",
                 campusGroup = "Paris",
-                sitesDescription = "Efrei Research Lab, salles de cours et recherche",
+                sitesDescription = "Bâtiment New Republic",
                 latitude = 48.790120,
                 longitude = 2.362140,
                 phone = "01 88 28 90 00",
                 caretakerPhone = "01 88 28 90 01",
-                hours = "Lundi au Vendredi : 08h00 - 19h30\nFermé le week-end",
+                hours = "Lundi au Vendredi : 08h00 - 19h30",
+                email = null,
                 accessTransport = "Métro 7 (Villejuif Louis Aragon), Bus 131, 172",
-                description = "Bâtiment moderne abritant les laboratoires de recherche de l'école (Efrei Research Lab) ainsi que des salles de cours spécialisées."
+                description = null
             )
         )
     }

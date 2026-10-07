@@ -53,6 +53,10 @@ class CampusDetailsBottomSheet : BottomSheetDialogFragment() {
         val dialogCampusPhone: TextView = view.findViewById(R.id.dialogCampusPhone)
         val btnCallPhone: MaterialButton = view.findViewById(R.id.btnCallPhone)
 
+        val layoutDialogEmail: View = view.findViewById(R.id.layoutDialogEmail)
+        val dialogCampusEmail: TextView = view.findViewById(R.id.dialogCampusEmail)
+        val btnSendEmail: MaterialButton = view.findViewById(R.id.btnSendEmail)
+
         val layoutDialogHours: View = view.findViewById(R.id.layoutDialogHours)
         val dialogCampusHours: TextView = view.findViewById(R.id.dialogCampusHours)
 
@@ -66,7 +70,13 @@ class CampusDetailsBottomSheet : BottomSheetDialogFragment() {
         dialogCampusGroupBadge.text = "Campus ${c.campusGroup}"
         dialogCampusCity.text = if (!c.postalCode.isNullOrBlank()) "${c.city} (${c.postalCode})" else c.city
         dialogCampusTitle.text = c.name
-        dialogCampusSubtitle.text = c.description ?: c.sitesDescription ?: "Site de formation et vie étudiante"
+        val desc = c.description?.takeIf { it.isNotBlank() } ?: c.sitesDescription?.takeIf { it.isNotBlank() }
+        if (desc != null) {
+            dialogCampusSubtitle.text = desc
+            dialogCampusSubtitle.visibility = View.VISIBLE
+        } else {
+            dialogCampusSubtitle.visibility = View.GONE
+        }
         dialogCampusAddress.text = c.address.replace("\n", ", ")
 
         // Caretaker (Gardien / Sécurité)
@@ -91,6 +101,20 @@ class CampusDetailsBottomSheet : BottomSheetDialogFragment() {
             }
         } else {
             layoutDialogPhone.visibility = View.GONE
+        }
+
+        // Email
+        if (!c.email.isNullOrBlank()) {
+            layoutDialogEmail.visibility = View.VISIBLE
+            dialogCampusEmail.text = c.email
+            btnSendEmail.setOnClickListener {
+                val mailIntent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${c.email}")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(mailIntent)
+            }
+        } else {
+            layoutDialogEmail.visibility = View.GONE
         }
 
         // Hours
