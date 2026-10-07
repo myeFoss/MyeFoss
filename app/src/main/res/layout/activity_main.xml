@@ -1408,58 +1408,7 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
-                                <!-- Summary Header Card -->
-                                <com.google.android.material.card.MaterialCardView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginBottom="16dp"
-                                    app:cardCornerRadius="20dp"
-                                    app:cardElevation="0dp"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="?attr/colorOutlineVariant"
-                                    app:cardBackgroundColor="?attr/colorSurface">
 
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:gravity="center_vertical"
-                                        android:orientation="horizontal"
-                                        android:padding="20dp">
-
-                                        <LinearLayout
-                                            android:layout_width="0dp"
-                                            android:layout_height="wrap_content"
-                                            android:layout_weight="1"
-                                            android:orientation="vertical">
-
-                                            <TextView
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:fontFamily="sans-serif-bold"
-                                                android:text="Les campus"
-                                                android:textColor="?attr/colorOnSurface"
-                                                android:textSize="17sp" />
-
-                                            <TextView
-                                                android:id="@+id/tvCampusCountSubtitle"
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:layout_marginTop="2dp"
-                                                android:text="Bordeaux &amp; Paris"
-                                                android:textColor="?attr/colorOnSurfaceVariant"
-                                                android:textSize="13sp" />
-                                        </LinearLayout>
-
-                                        <ImageView
-                                            android:layout_width="36dp"
-                                            android:layout_height="36dp"
-                                            android:background="?attr/colorPrimaryContainer"
-                                            android:padding="8dp"
-                                            android:src="@drawable/ic_location"
-                                            app:tint="?attr/colorOnPrimaryContainer" />
-
-                                    </LinearLayout>
-                                </com.google.android.material.card.MaterialCardView>
 
                                 <TextView
                                     android:layout_width="wrap_content"
@@ -1523,59 +1472,7 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
-                                <!-- Summary Header Card -->
-                                <com.google.android.material.card.MaterialCardView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginBottom="16dp"
-                                    app:cardCornerRadius="20dp"
-                                    app:cardElevation="0dp"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="?attr/colorOutlineVariant"
-                                    app:cardBackgroundColor="?attr/colorSurface">
 
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:gravity="center_vertical"
-                                        android:orientation="horizontal"
-                                        android:padding="20dp">
-
-                                        <LinearLayout
-                                            android:layout_width="0dp"
-                                            android:layout_height="wrap_content"
-                                            android:layout_weight="1"
-                                            android:orientation="vertical">
-
-                                            <TextView
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:fontFamily="sans-serif-bold"
-                                                android:text="LXP / E-learning"
-                                                android:textColor="?attr/colorOnSurface"
-                                                android:textSize="17sp" />
-
-                                            <TextView
-                                                android:id="@+id/tvLxpSubtitle"
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:layout_marginTop="2dp"
-                                                android:text="Catalogue et actions de formation"
-                                                android:textColor="?attr/colorOnSurfaceVariant"
-                                                android:textSize="13sp" />
-
-                                        </LinearLayout>
-
-                                        <ImageView
-                                            android:layout_width="44dp"
-                                            android:layout_height="44dp"
-                                            android:background="?attr/colorTertiaryContainer"
-                                            android:padding="10dp"
-                                            android:src="@drawable/ic_book"
-                                            app:tint="?attr/colorOnTertiaryContainer" />
-
-                                    </LinearLayout>
-                                </com.google.android.material.card.MaterialCardView>
 
                                 <!-- Loading / Empty / Content states -->
                                 <LinearLayout

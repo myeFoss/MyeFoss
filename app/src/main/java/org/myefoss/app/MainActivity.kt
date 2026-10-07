@@ -81,7 +81,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swipeRefreshLxp: SwipeRefreshLayout
     private lateinit var layoutLxpLoading: LinearLayout
     private lateinit var layoutLxpEmpty: LinearLayout
-    private lateinit var tvLxpSubtitle: TextView
     private lateinit var tvLxpEmptyMessage: TextView
     private lateinit var btnHeaderOpenCatalog: MaterialButton
     private lateinit var btnOpenLxpCatalog: MaterialButton
@@ -271,7 +270,6 @@ class MainActivity : AppCompatActivity() {
         swipeRefreshLxp = findViewById(R.id.swipeRefreshLxp)
         layoutLxpLoading = findViewById(R.id.layoutLxpLoading)
         layoutLxpEmpty = findViewById(R.id.layoutLxpEmpty)
-        tvLxpSubtitle = findViewById(R.id.tvLxpSubtitle)
         tvLxpEmptyMessage = findViewById(R.id.tvLxpEmptyMessage)
         btnHeaderOpenCatalog = findViewById(R.id.btnHeaderOpenCatalog)
         btnOpenLxpCatalog = findViewById(R.id.btnOpenLxpCatalog)
@@ -2308,12 +2306,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Safety timeout after 8 seconds
+            // Safety timeout after 10 seconds
             val timeoutHandler = Handler(Looper.getMainLooper())
             val timeoutRunnable = Runnable {
                 finish(emptyList())
             }
-            timeoutHandler.postDelayed(timeoutRunnable, 8000)
+            timeoutHandler.postDelayed(timeoutRunnable, 10000)
 
             cont.invokeOnCancellation {
                 timeoutHandler.removeCallbacks(timeoutRunnable)
@@ -2322,6 +2320,11 @@ class MainActivity : AppCompatActivity() {
                     webView.destroy()
                 } catch (e: Exception) {}
             }
+
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+            cookieManager.setAcceptThirdPartyCookies(webView, true)
+            cookieManager.flush()
 
             val settings = webView.settings
             settings.javaScriptEnabled = true
@@ -2332,24 +2335,48 @@ class MainActivity : AppCompatActivity() {
             class LxpJsBridge {
                 @JavascriptInterface
                 fun onScraped(jsonStr: String) {
-                    timeoutHandler.removeCallbacks(timeoutRunnable)
-                    Handler(Looper.getMainLooper()).post {
-                        val actions = parseLxpJson(jsonStr)
-                        finish(actions)
+                    val actions = parseLxpJson(jsonStr)
+                    if (actions.isNotEmpty()) {
+                        timeoutHandler.removeCallbacks(timeoutRunnable)
+                        Handler(Looper.getMainLooper()).post {
+                            finish(actions)
+                        }
                     }
                 }
             }
 
             webView.addJavascriptInterface(LxpJsBridge(), "LxpBridge")
 
+            var hasTriedCatalog = false
+
             webView.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    timeoutHandler.postDelayed({
-                        if (!resumed) {
-                            executeLxpExtractorScript(webView)
-                        }
-                    }, 1800)
+                    val currentUrl = url ?: ""
+
+                    // If redirected to login/SSO portal, let it settle or redirect back
+                    if (currentUrl.contains("/auth/efrei")) {
+                        return
+                    }
+
+                    // Schedule multiple DOM extraction passes to catch asynchronous React hydrate
+                    listOf(1000L, 2500L, 4000L).forEach { delayMs ->
+                        timeoutHandler.postDelayed({
+                            if (!resumed) {
+                                executeLxpExtractorScript(webView)
+                            }
+                        }, delayMs)
+                    }
+
+                    // If after 4.5s still empty on /lxp, try /portal/student/lxp/catalog/
+                    if (!hasTriedCatalog && currentUrl.endsWith("/lxp")) {
+                        hasTriedCatalog = true
+                        timeoutHandler.postDelayed({
+                            if (!resumed) {
+                                webView.loadUrl("https://www.myefrei.fr/portal/student/lxp/catalog/")
+                            }
+                        }, 4500)
+                    }
                 }
             }
 
@@ -2373,34 +2400,66 @@ class MainActivity : AppCompatActivity() {
                             var props = json.props && json.props.pageProps;
                             if (props) {
                                 window.LxpBridge.onScraped(JSON.stringify(props));
-                                return;
                             }
                         } catch(e) {}
                     }
 
-                    // 2. DOM elements inspection for cards / suggested actions
+                    // 2. Global state or window variables (Redux / Apollo / React Query cache)
+                    if (window.__PRELOADED_STATE__) {
+                        window.LxpBridge.onScraped(JSON.stringify(window.__PRELOADED_STATE__));
+                    }
+
+                    // 3. Search for card containers & action elements anywhere in DOM
                     var items = [];
-                    var elements = document.querySelectorAll('div[class*="card"], div[class*="action"], tr, a[href*="lxp"], div[role="listitem"]');
+                    var selectors = [
+                        'div[class*="card"]', 'div[class*="action"]', 'div[class*="item"]',
+                        'div[class*="catalog"]', 'div[class*="course"]', 'div[class*="Module"]',
+                        'a[href*="/lxp"]', 'a[href*="/catalog"]', 'article', 'tr'
+                    ];
+                    var elements = document.querySelectorAll(selectors.join(', '));
                     elements.forEach(function(el, i) {
-                        var h = el.querySelector('h1, h2, h3, h4, h5, h6, strong, b');
-                        if (h && h.innerText && h.innerText.length > 2) {
-                            var title = h.innerText.trim();
-                            var fullText = el.innerText || '';
+                        var h = el.querySelector('h1, h2, h3, h4, h5, h6, strong, b, [class*="title"], [class*="Title"]');
+                        var title = h ? (h.innerText || '').trim() : '';
+                        if (!title && el.tagName === 'A') {
+                            title = (el.innerText || '').trim().split('\n')[0];
+                        }
+                        if (title && title.length > 3 && title.length < 120 && !title.includes('Actions suggérées') && !title.includes('Catalogue') && !title.includes('Connexion')) {
+                            var fullText = (el.innerText || '').trim();
                             var link = el.getAttribute('href') || (el.querySelector('a') ? el.querySelector('a').getAttribute('href') : '');
+                            
+                            // Extract metadata badges if present
+                            var cat = '';
+                            var status = 'Disponible';
+                            var badge = el.querySelector('[class*="badge"], [class*="chip"], [class*="tag"], [class*="status"]');
+                            if (badge) {
+                                status = badge.innerText.trim();
+                            }
+                            
                             items.push({
                                 id: 'item_' + i,
                                 title: title,
                                 description: fullText.replace(title, '').trim().substring(0, 200),
+                                category: cat || 'Formation',
+                                status: status,
                                 detailUrl: link || '',
                                 canRegister: true
                             });
                         }
                     });
 
-                    window.LxpBridge.onScraped(JSON.stringify(items));
-                } catch(e) {
-                    window.LxpBridge.onScraped("[]");
-                }
+                    if (items.length > 0) {
+                        // Deduplicate items by title
+                        var uniqueMap = {};
+                        var deduped = [];
+                        items.forEach(function(it) {
+                            if (!uniqueMap[it.title]) {
+                                uniqueMap[it.title] = true;
+                                deduped.push(it);
+                            }
+                        });
+                        window.LxpBridge.onScraped(JSON.stringify(deduped));
+                    }
+                } catch(e) {}
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
