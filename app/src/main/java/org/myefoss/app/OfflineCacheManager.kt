@@ -302,6 +302,53 @@ object OfflineCacheManager {
         }
     }
 
+    private const val LXP_CACHE_FILE = "myefoss_lxp_cache.json"
+
+    fun saveLxpActions(context: Context, actions: List<LxpAction>) {
+        try {
+            val file = File(context.filesDir, LXP_CACHE_FILE)
+            val jsonArray = JSONArray()
+            actions.forEach { a ->
+                val obj = JSONObject().apply {
+                    put("id", a.id)
+                    put("title", a.title)
+                    put("description", a.description)
+                    put("dateOrPeriod", a.dateOrPeriod)
+                    put("category", a.category)
+                    put("status", a.status)
+                    put("isRegistered", a.isRegistered)
+                    put("canRegister", a.canRegister)
+                    put("locationOrRoom", a.locationOrRoom)
+                    put("teacherOrSpeaker", a.teacherOrSpeaker)
+                    put("maxParticipants", a.maxParticipants)
+                    put("currentParticipants", a.currentParticipants)
+                    put("detailUrl", a.detailUrl)
+                    put("registrationUrl", a.registrationUrl)
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadLxpActions(context: Context): List<LxpAction> {
+        return try {
+            val file = File(context.filesDir, LXP_CACHE_FILE)
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<LxpAction>()
+            for (i in 0 until jsonArray.length()) {
+                list.add(LxpAction.fromJson(jsonArray.getJSONObject(i)))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun clearAllCache(context: Context) {
         try {
             val filesDir = context.filesDir ?: return

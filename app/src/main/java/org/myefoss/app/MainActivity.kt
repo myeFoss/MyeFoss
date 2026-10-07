@@ -67,10 +67,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerGrades: LinearLayout
     private lateinit var tabContainerAbsences: LinearLayout
     private lateinit var tabContainerCampus: LinearLayout
+    private lateinit var tabContainerLxp: LinearLayout
 
     // Campus views
     private lateinit var layoutCampusList: LinearLayout
     private lateinit var swipeRefreshCampus: SwipeRefreshLayout
+
+    // LXP views
+    private lateinit var layoutLxpList: LinearLayout
+    private lateinit var swipeRefreshLxp: SwipeRefreshLayout
+    private lateinit var layoutLxpLoading: LinearLayout
+    private lateinit var layoutLxpEmpty: LinearLayout
+    private lateinit var tvLxpSubtitle: TextView
+    private lateinit var tvLxpEmptyMessage: TextView
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
@@ -247,9 +256,17 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades = findViewById(R.id.tabContainerGrades)
         tabContainerAbsences = findViewById(R.id.tabContainerAbsences)
         tabContainerCampus = findViewById(R.id.tabContainerCampus)
+        tabContainerLxp = findViewById(R.id.tabContainerLxp)
 
         layoutCampusList = findViewById(R.id.layoutCampusList)
         swipeRefreshCampus = findViewById(R.id.swipeRefreshCampus)
+
+        layoutLxpList = findViewById(R.id.layoutLxpList)
+        swipeRefreshLxp = findViewById(R.id.swipeRefreshLxp)
+        layoutLxpLoading = findViewById(R.id.layoutLxpLoading)
+        layoutLxpEmpty = findViewById(R.id.layoutLxpEmpty)
+        tvLxpSubtitle = findViewById(R.id.tvLxpSubtitle)
+        tvLxpEmptyMessage = findViewById(R.id.tvLxpEmptyMessage)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
@@ -335,7 +352,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.drawer_lxp -> {
-                    showScolarityFeature("LXP / E-learning")
+                    openLxpScreen()
                     true
                 }
                 R.id.drawer_campus -> {
@@ -414,7 +431,7 @@ class MainActivity : AppCompatActivity() {
 
         cardGrades.setOnClickListener { openGradesScreen() }
         cardAbsences.setOnClickListener { openAbsencesScreen() }
-        cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
+        cardLxp.setOnClickListener { openLxpScreen() }
         cardCampus.setOnClickListener { showCampusTab() }
 
         btnBackFromGrades.setOnClickListener {
@@ -445,6 +462,10 @@ class MainActivity : AppCompatActivity() {
             loadCampusesList(isSwipe = true)
         }
 
+        swipeRefreshLxp.setOnRefreshListener {
+            loadLxpActions(isSwipe = true)
+        }
+
         setupThemeSettings()
 
         btnLogin.setOnClickListener {
@@ -460,6 +481,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Planning"
         btnRefresh.visibility = View.VISIBLE
         bottomNavigation.menu.findItem(R.id.nav_planning)?.isChecked = true
@@ -474,6 +496,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Scolarité"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_scolarity)?.isChecked = true
@@ -489,12 +512,29 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.VISIBLE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Campus"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_campus)?.isChecked = true
         navigationDrawer.setCheckedItem(R.id.drawer_campus)
 
         loadCampusesList()
+    }
+
+    private fun openLxpScreen() {
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "lxp").apply()
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.VISIBLE
+        tvToolbarTitle.text = "LXP / E-learning"
+        btnRefresh.visibility = View.GONE
+        navigationDrawer.setCheckedItem(R.id.drawer_lxp)
+
+        loadLxpActions()
     }
 
     private fun openSettingsScreen() {
@@ -504,6 +544,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerSettings.visibility = View.VISIBLE
         tvToolbarTitle.text = "Paramètres"
         btnRefresh.visibility = View.GONE
@@ -517,6 +558,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerGrades.visibility = View.VISIBLE
         tvToolbarTitle.text = "Notes & Résultats"
         btnRefresh.visibility = View.GONE
@@ -532,6 +574,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerAbsences.visibility = View.VISIBLE
         tvToolbarTitle.text = "Suivi des Absences"
         btnRefresh.visibility = View.GONE
@@ -1994,6 +2037,283 @@ class MainActivity : AppCompatActivity() {
         return list
     }
 
+    private fun loadLxpActions(isSwipe: Boolean = false) {
+        if (!isSwipe) {
+            layoutLxpList.removeAllViews()
+            layoutLxpLoading.visibility = View.VISIBLE
+            layoutLxpEmpty.visibility = View.GONE
+        }
+
+        // 1. Load cached actions
+        val cached = OfflineCacheManager.loadLxpActions(this)
+        if (cached.isNotEmpty()) {
+            displayLxpActions(cached)
+            layoutLxpLoading.visibility = View.GONE
+        }
+
+        if (isSwipe) {
+            swipeRefreshLxp.isRefreshing = true
+        }
+
+        // 2. Fetch fresh actions in background
+        lifecycleScope.launch {
+            try {
+                val fresh = withContext(Dispatchers.IO) {
+                    fetchLxpActionsFromApi()
+                }
+                layoutLxpLoading.visibility = View.GONE
+                if (fresh.isNotEmpty()) {
+                    OfflineCacheManager.saveLxpActions(this@MainActivity, fresh)
+                    displayLxpActions(fresh)
+                } else if (cached.isEmpty()) {
+                    layoutLxpEmpty.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                layoutLxpLoading.visibility = View.GONE
+                if (cached.isEmpty()) {
+                    layoutLxpEmpty.visibility = View.VISIBLE
+                    tvLxpEmptyMessage.text = "Impossible de charger les actions LXP (connexion ou session requise)."
+                }
+            } finally {
+                swipeRefreshLxp.isRefreshing = false
+            }
+        }
+    }
+
+    private fun displayLxpActions(actions: List<LxpAction>) {
+        layoutLxpList.removeAllViews()
+        if (actions.isEmpty()) {
+            layoutLxpEmpty.visibility = View.VISIBLE
+            return
+        }
+        layoutLxpEmpty.visibility = View.GONE
+        val inflater = LayoutInflater.from(this)
+
+        actions.forEach { action ->
+            val view = inflater.inflate(R.layout.item_lxp_action_card, layoutLxpList, false)
+            val tvCategory: TextView = view.findViewById(R.id.tvActionCategory)
+            val tvStatusChip: TextView = view.findViewById(R.id.tvActionStatusChip)
+            val tvTitle: TextView = view.findViewById(R.id.tvActionTitle)
+            val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
+            val tvDate: TextView = view.findViewById(R.id.tvActionDate)
+            val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
+            val btnDetails: MaterialButton = view.findViewById(R.id.btnDetailsAction)
+            val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
+
+            tvCategory.text = if (action.category.isNotBlank()) action.category else "Formation / Atelier"
+            tvTitle.text = action.title
+
+            if (action.description.isNotBlank()) {
+                tvDescription.visibility = View.VISIBLE
+                tvDescription.text = action.description
+            } else {
+                tvDescription.visibility = View.GONE
+            }
+
+            if (action.isRegistered) {
+                tvStatusChip.text = "Inscrit"
+                btnRegister.text = "Inscrit"
+                btnRegister.isEnabled = false
+            } else if (!action.canRegister) {
+                tvStatusChip.text = "Clôturé"
+                btnRegister.text = "Fermé"
+                btnRegister.isEnabled = false
+            } else {
+                tvStatusChip.text = if (action.status.isNotBlank()) action.status else "Disponible"
+                btnRegister.text = "S'inscrire"
+                btnRegister.isEnabled = true
+            }
+
+            tvDate.text = if (action.dateOrPeriod.isNotBlank()) action.dateOrPeriod else "Date à venir"
+
+            val extraParts = mutableListOf<String>()
+            if (action.teacherOrSpeaker.isNotBlank()) extraParts.add(action.teacherOrSpeaker)
+            if (action.locationOrRoom.isNotBlank()) extraParts.add(action.locationOrRoom)
+            if (action.maxParticipants > 0) {
+                extraParts.add("${action.currentParticipants}/${action.maxParticipants} inscrits")
+            }
+            if (extraParts.isNotEmpty()) {
+                tvExtra.text = extraParts.joinToString(" • ")
+                tvExtra.visibility = View.VISIBLE
+            } else {
+                tvExtra.visibility = View.GONE
+            }
+
+            // Click card or details button to open details sheet
+            val openSheet = {
+                LxpDetailsBottomSheet.newInstance(action) { act ->
+                    handleActionRegistration(act)
+                }.show(supportFragmentManager, "LxpDetails_${action.id}")
+            }
+
+            view.setOnClickListener { openSheet() }
+            btnDetails.setOnClickListener { openSheet() }
+
+            btnRegister.setOnClickListener {
+                handleActionRegistration(action)
+            }
+
+            layoutLxpList.addView(view)
+        }
+    }
+
+    private fun handleActionRegistration(action: LxpAction) {
+        val targetUrl = when {
+            action.registrationUrl.isNotBlank() -> action.registrationUrl
+            action.detailUrl.isNotBlank() -> action.detailUrl
+            action.id.isNotBlank() -> "https://www.myefrei.fr/portal/student/lxp/catalog/${action.id}"
+            else -> "https://www.myefrei.fr/portal/student/lxp/catalog/"
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossible d'ouvrir le lien d'inscription", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun fetchLxpActionsFromApi(): List<LxpAction> {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/portal/student/lxp") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf("=")
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val list = mutableListOf<LxpAction>()
+
+        val endpointsToTry = listOf(
+            "https://www.myefrei.fr/api/rest/student/lxp/catalog",
+            "https://www.myefrei.fr/api/rest/student/lxp",
+            "https://www.myefrei.fr/portal/student/lxp/catalog/",
+            "https://www.myefrei.fr/portal/student/lxp"
+        )
+
+        for (endpoint in endpointsToTry) {
+            try {
+                val conn = URL(endpoint).openConnection() as HttpURLConnection
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                conn.setRequestProperty("Accept", "application/json, text/html, */*")
+                if (mergedCookies.isNotBlank()) {
+                    conn.setRequestProperty("Cookie", mergedCookies)
+                }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val raw = conn.inputStream.bufferedReader().use { it.readText() }
+                    val trimmed = raw.trim()
+
+                    // Case A: JSON Array or Object
+                    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                        val parsed = parseLxpJson(trimmed)
+                        if (parsed.isNotEmpty()) {
+                            list.addAll(parsed)
+                            break
+                        }
+                    }
+
+                    // Case B: HTML page with catalog items or embedded Next.js JSON
+                    val fromHtml = parseLxpFromHtml(trimmed)
+                    if (fromHtml.isNotEmpty()) {
+                        list.addAll(fromHtml)
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                // Continue to next endpoint fallback
+            }
+        }
+        return list
+    }
+
+    private fun parseLxpJson(rawJson: String): List<LxpAction> {
+        val list = mutableListOf<LxpAction>()
+        try {
+            if (rawJson.startsWith("[")) {
+                val array = JSONArray(rawJson)
+                for (i in 0 until array.length()) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    list.add(LxpAction.fromJson(obj))
+                }
+            } else if (rawJson.startsWith("{")) {
+                val obj = JSONObject(rawJson)
+                val array = obj.optJSONArray("actions")
+                    ?: obj.optJSONArray("data")
+                    ?: obj.optJSONArray("items")
+                    ?: obj.optJSONArray("catalog")
+                    ?: obj.optJSONArray("courses")
+                if (array != null) {
+                    for (i in 0 until array.length()) {
+                        val item = array.optJSONObject(i) ?: continue
+                        list.add(LxpAction.fromJson(item))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore parse errors
+        }
+        return list
+    }
+
+    private fun parseLxpFromHtml(html: String): List<LxpAction> {
+        val list = mutableListOf<LxpAction>()
+        try {
+            // 1. Look for embedded NEXT_DATA JSON
+            val nextDataRegex = Regex("<script id=\"__NEXT_DATA__\" type=\"application/json\">([\\s\\S]*?)</script>")
+            val match = nextDataRegex.find(html)
+            if (match != null) {
+                val jsonStr = match.groupValues[1].trim()
+                val nextObj = JSONObject(jsonStr)
+                val pageProps = nextObj.optJSONObject("props")?.optJSONObject("pageProps")
+                if (pageProps != null) {
+                    val parsed = parseLxpJson(pageProps.toString())
+                    if (parsed.isNotEmpty()) return parsed
+                }
+            }
+
+            // 2. Generic fallback card regex in HTML if rendered on server
+            val cardRegex = Regex("<div[^>]*class=\"[^\"]*(?:card|action|catalog-item)[^\"]*\"[\\s\\S]*?</div>\\s*</div>", RegexOption.IGNORE_CASE)
+            var idx = 0
+            cardRegex.findAll(html).forEach { m ->
+                val cardHtml = m.value
+                val titleMatch = Regex("<h[1-6][^>]*>(.*?)</h[1-6]>", RegexOption.IGNORE_CASE).find(cardHtml)
+                val title = titleMatch?.groupValues?.get(1)?.replace(Regex("<[^>]*>"), "")?.trim() ?: ""
+                if (title.isNotBlank()) {
+                    list.add(
+                        LxpAction(
+                            id = "html_$idx",
+                            title = title,
+                            description = "",
+                            category = "LXP",
+                            canRegister = true
+                        )
+                    )
+                    idx++
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore html parsing errors
+        }
+        return list
+    }
+
 
     private fun updateExpandState() {
         if (isMonthExpanded) {
@@ -2547,7 +2867,7 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawer(GravityCompat.START)
             return
         }
-        if (tabContainerGrades.visibility == View.VISIBLE || tabContainerAbsences.visibility == View.VISIBLE) {
+        if (tabContainerGrades.visibility == View.VISIBLE || tabContainerAbsences.visibility == View.VISIBLE || tabContainerLxp.visibility == View.VISIBLE) {
             showScolarityTab()
             return
         }
