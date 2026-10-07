@@ -71,7 +71,6 @@ class MainActivity : AppCompatActivity() {
     // Campus views
     private lateinit var layoutCampusList: LinearLayout
     private lateinit var swipeRefreshCampus: SwipeRefreshLayout
-    private lateinit var tvCampusCountSubtitle: TextView
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
@@ -251,7 +250,6 @@ class MainActivity : AppCompatActivity() {
 
         layoutCampusList = findViewById(R.id.layoutCampusList)
         swipeRefreshCampus = findViewById(R.id.swipeRefreshCampus)
-        tvCampusCountSubtitle = findViewById(R.id.tvCampusCountSubtitle)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
@@ -1794,8 +1792,6 @@ class MainActivity : AppCompatActivity() {
         val inflater = LayoutInflater.from(this)
 
         val groups = campuses.groupBy { it.campusGroup }
-        val totalSites = campuses.size
-        tvCampusCountSubtitle.text = "$totalSites sites et bâtiments répertoriés"
 
         // Desired display order: Campus Bordeaux first, then Campus Paris
         val orderedGroupKeys = listOf("Bordeaux", "Paris") + groups.keys.filter { it != "Bordeaux" && it != "Paris" }
@@ -1820,22 +1816,11 @@ class MainActivity : AppCompatActivity() {
             groupCampuses.forEach { campus ->
                 val view = inflater.inflate(R.layout.item_campus_card, layoutCampusList, false)
                 val tvName: TextView = view.findViewById(R.id.tvCampusName)
-                val tvSubtitle: TextView = view.findViewById(R.id.tvCampusSubtitle)
                 val tvAddress: TextView = view.findViewById(R.id.tvCampusAddress)
-                val tvSites: TextView = view.findViewById(R.id.tvCampusSites)
                 val btnNavigate: MaterialButton = view.findViewById(R.id.btnNavigateCampus)
 
                 tvName.text = campus.name
-                val cityText = if (!campus.postalCode.isNullOrBlank()) "${campus.city} (${campus.postalCode})" else campus.city
-                tvSubtitle.text = cityText
                 tvAddress.text = campus.address.replace("\n", ", ")
-
-                if (!campus.sitesDescription.isNullOrBlank()) {
-                    tvSites.text = campus.sitesDescription
-                    tvSites.visibility = View.VISIBLE
-                } else {
-                    tvSites.visibility = View.GONE
-                }
 
                 // Clicking the tile opens bottom sheet with complete details (caretaker, phone, hours, access)
                 view.setOnClickListener {

@@ -1457,7 +1457,7 @@
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
                                                 android:layout_marginTop="2dp"
-                                                android:text="2 campus en France"
+                                                android:text="Bordeaux &amp; Paris"
                                                 android:textColor="?attr/colorOnSurfaceVariant"
                                                 android:textSize="13sp" />
                                         </LinearLayout>
@@ -1477,7 +1477,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="sans-serif-bold"
-                                    android:text="Campus et Sites"
+                                    android:text="Sites et Adresses"
                                     android:textColor="?attr/colorPrimary"
                                     android:textSize="14sp"
                                     android:layout_marginBottom="12dp" />
