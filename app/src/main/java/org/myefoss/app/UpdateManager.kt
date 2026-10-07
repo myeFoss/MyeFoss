@@ -289,13 +289,33 @@ object UpdateManager {
     }
 
     private fun downloadAndInstall(context: Context, downloadUrl: String, tagName: String) {
+        // Check if unknown sources permission is granted on Android 8.0+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                Toast.makeText(
+                    context,
+                    "Veuillez autoriser MyeFoss à installer des applications",
+                    Toast.LENGTH_LONG
+                ).show()
+                val settingsIntent = Intent(
+                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:${context.packageName}")
+                ).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(settingsIntent)
+                // Continue downloading anyway so it's ready when user returns
+            }
+        }
+
         try {
             val fileName = "myefoss_${tagName.replace("/", "_")}.apk"
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
+            // Use app-specific external files dir or cache dir so FileProvider can always read it reliably without external storage permission
+            val updateDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
+            if (!updateDir.exists()) {
+                updateDir.mkdirs()
             }
-            val destinationFile = File(downloadsDir, fileName)
+            val destinationFile = File(updateDir, fileName)
             if (destinationFile.exists()) {
                 destinationFile.delete()
             }
@@ -305,7 +325,7 @@ object UpdateManager {
                 .setTitle("Téléchargement de MyeFoss $tagName")
                 .setDescription("Mise à jour de l'application...")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                .setDestinationUri(Uri.fromFile(destinationFile))
                 .setMimeType("application/vnd.android.package-archive")
 
             val downloadId = downloadManager.enqueue(request)
@@ -329,7 +349,7 @@ object UpdateManager {
                 context.registerReceiver(
                     onCompleteReceiver,
                     IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                    Context.RECEIVER_NOT_EXPORTED
+                    Context.RECEIVER_EXPORTED
                 )
             } else {
                 context.registerReceiver(
@@ -353,6 +373,22 @@ object UpdateManager {
     fun installApk(context: Context, apkFile: File) {
         if (!apkFile.exists()) {
             Toast.makeText(context, "Fichier d'installation introuvable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+            Toast.makeText(
+                context,
+                "Autorisez l'installation d'applications pour finaliser la mise à jour",
+                Toast.LENGTH_LONG
+            ).show()
+            val settingsIntent = Intent(
+                android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(settingsIntent)
             return
         }
 
