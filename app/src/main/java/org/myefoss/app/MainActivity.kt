@@ -1,6 +1,7 @@
 package org.myefoss.app
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -182,7 +183,30 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkSessionAndLoad()
+
+        AppUpdateWorker.createNotificationChannel(this)
+        AppUpdateWorker.schedule(this)
+
+        handleUpdateIntent(intent)
         checkForUpdatesSilently()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleUpdateIntent(it) }
+    }
+
+    private fun handleUpdateIntent(intent: Intent) {
+        if (intent.getBooleanExtra("EXTRA_SHOW_UPDATE", false)) {
+            intent.removeExtra("EXTRA_SHOW_UPDATE")
+            lifecycleScope.launch {
+                val release = UpdateManager.checkLatestRelease()
+                if (release != null && UpdateManager.isNewerVersion(BuildConfig.VERSION_NAME, release.tagName)) {
+                    val changelog = UpdateManager.fetchChangelogMarkdown(BuildConfig.VERSION_NAME, release.tagName)
+                    UpdateManager.showUpdateDialog(this@MainActivity, release, changelog) {}
+                }
+            }
+        }
     }
 
     private fun checkForUpdatesSilently() {
