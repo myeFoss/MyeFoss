@@ -302,6 +302,91 @@ object OfflineCacheManager {
         }
     }
 
+    private const val LXP_CACHE_FILE = "myefoss_lxp_cache.json"
+
+    fun saveLxpActions(context: Context, actions: List<LxpAction>) {
+        try {
+            val file = File(context.filesDir, LXP_CACHE_FILE)
+            val jsonArray = JSONArray()
+            actions.forEach { a ->
+                val obj = JSONObject().apply {
+                    put("id", a.id)
+                    put("title", a.title)
+                    put("description", a.description)
+                    put("dateOrPeriod", a.dateOrPeriod)
+                    put("category", a.category)
+                    put("status", a.status)
+                    put("isRegistered", a.isRegistered)
+                    put("canRegister", a.canRegister)
+                    put("locationOrRoom", a.locationOrRoom)
+                    put("teacherOrSpeaker", a.teacherOrSpeaker)
+                    put("maxParticipants", a.maxParticipants)
+                    put("currentParticipants", a.currentParticipants)
+                    put("detailUrl", a.detailUrl)
+                    put("registrationUrl", a.registrationUrl)
+                    put("imageUrl", a.imageUrl)
+                }
+                jsonArray.put(obj)
+            }
+            file.writeText(jsonArray.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadLxpActions(context: Context): List<LxpAction> {
+        return try {
+            val file = File(context.filesDir, LXP_CACHE_FILE)
+            if (!file.exists()) return emptyList()
+            val text = file.readText()
+            val jsonArray = JSONArray(text)
+            val list = mutableListOf<LxpAction>()
+            for (i in 0 until jsonArray.length()) {
+                list.add(LxpAction.fromJson(jsonArray.getJSONObject(i)))
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private const val PROFILE_CACHE_FILE = "myefoss_profile_cache.json"
+
+    fun saveStudentProfile(context: Context, profile: StudentProfile) {
+        try {
+            val file = File(context.filesDir, PROFILE_CACHE_FILE)
+            val obj = JSONObject().apply {
+                put("fullName", profile.fullName)
+                put("firstName", profile.firstName)
+                put("lastName", profile.lastName)
+                put("email", profile.email)
+                put("studentId", profile.studentId)
+                put("program", profile.program)
+            }
+            file.writeText(obj.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadStudentProfile(context: Context): StudentProfile? {
+        return try {
+            val file = File(context.filesDir, PROFILE_CACHE_FILE)
+            if (!file.exists()) return null
+            val obj = JSONObject(file.readText())
+            StudentProfile(
+                fullName = obj.optString("fullName", ""),
+                firstName = obj.optString("firstName", ""),
+                lastName = obj.optString("lastName", ""),
+                email = obj.optString("email", ""),
+                studentId = obj.optString("studentId", ""),
+                program = obj.optString("program", "")
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun clearAllCache(context: Context) {
         try {
             val filesDir = context.filesDir ?: return
@@ -360,5 +445,14 @@ data class CampusInfo(
     val email: String? = null,
     val accessTransport: String? = null,
     val description: String? = null
+)
+
+data class StudentProfile(
+    val fullName: String,
+    val firstName: String = "",
+    val lastName: String = "",
+    val email: String = "",
+    val studentId: String = "",
+    val program: String = ""
 )
 

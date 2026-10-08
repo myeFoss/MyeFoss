@@ -19,81 +19,134 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Pixel / Google System App Style Floating Header Bar -->
-            <FrameLayout
+            <!-- Standard Material 3 Top App Bar (Edge-to-Edge flat header) -->
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/topAppBar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorSurface"
+                app:contentInsetStart="8dp"
+                app:contentInsetEnd="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Hamburger Drawer Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMenuDrawer"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_menu"
+                        app:iconSize="24dp"
+                        app:iconTint="?attr/colorOnSurface" />
+
+                    <!-- Title & Subtitle block -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvToolbarTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Planning"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/tvStudentSubtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MyeFoss"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Refresh Action Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRefresh"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_refresh"
+                        app:iconSize="22dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+            </com.google.android.material.appbar.MaterialToolbar>
+
+            <!-- Session Expired Reconnect Alert Banner -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/bannerSessionExpired"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="6dp">
+                android:layout_margin="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorError"
+                app:cardBackgroundColor="?attr/colorErrorContainer">
 
-                <com.google.android.material.card.MaterialCardView
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    app:cardCornerRadius="26dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="?attr/colorOutlineVariant"
-                    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_security"
+                        app:tint="?attr/colorOnErrorContainer" />
 
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp">
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                        <!-- Hamburger Drawer Button -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnMenuDrawer"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:icon="@drawable/ic_menu"
-                            app:iconSize="22dp"
-                            app:iconTint="?attr/colorOnSurface" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Session expirée"
+                            android:textColor="?attr/colorOnErrorContainer"
+                            android:textSize="13sp" />
 
-                            <TextView
-                                android:id="@+id/tvToolbarTitle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="Planning"
-                                android:textColor="?attr/colorOnSurface"
-                                android:textSize="16sp" />
-
-                            <TextView
-                                android:id="@+id/tvStudentSubtitle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="MyeFoss"
-                                android:textColor="?attr/colorOnSurfaceVariant"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <!-- Refresh Button -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRefresh"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:icon="@drawable/ic_refresh"
-                            app:iconSize="20dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Reconnectez-vous pour actualiser vos cours et données."
+                            android:textColor="?attr/colorOnErrorContainer"
+                            android:textSize="12sp" />
                     </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
-            </FrameLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBannerReconnect"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Se reconnecter"
+                        android:textSize="12sp"
+                        app:cornerRadius="10dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Main Tab Container: Planning View vs Scolarity View -->
             <FrameLayout
@@ -1420,58 +1473,7 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
-                                <!-- Summary Header Card -->
-                                <com.google.android.material.card.MaterialCardView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginBottom="16dp"
-                                    app:cardCornerRadius="20dp"
-                                    app:cardElevation="0dp"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="?attr/colorOutlineVariant"
-                                    app:cardBackgroundColor="?attr/colorSurface">
 
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:gravity="center_vertical"
-                                        android:orientation="horizontal"
-                                        android:padding="20dp">
-
-                                        <LinearLayout
-                                            android:layout_width="0dp"
-                                            android:layout_height="wrap_content"
-                                            android:layout_weight="1"
-                                            android:orientation="vertical">
-
-                                            <TextView
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:fontFamily="sans-serif-bold"
-                                                android:text="Les campus"
-                                                android:textColor="?attr/colorOnSurface"
-                                                android:textSize="17sp" />
-
-                                            <TextView
-                                                android:id="@+id/tvCampusCountSubtitle"
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:layout_marginTop="2dp"
-                                                android:text="Bordeaux &amp; Paris"
-                                                android:textColor="?attr/colorOnSurfaceVariant"
-                                                android:textSize="13sp" />
-                                        </LinearLayout>
-
-                                        <ImageView
-                                            android:layout_width="36dp"
-                                            android:layout_height="36dp"
-                                            android:background="?attr/colorPrimaryContainer"
-                                            android:padding="8dp"
-                                            android:src="@drawable/ic_location"
-                                            app:tint="?attr/colorOnPrimaryContainer" />
-
-                                    </LinearLayout>
-                                </com.google.android.material.card.MaterialCardView>
 
                                 <TextView
                                     android:layout_width="wrap_content"
@@ -1498,6 +1500,174 @@
                                     android:gravity="center"
                                     android:lineSpacingExtra="3dp"
                                     android:text="Touchez une carte pour voir les détails (gardien, horaires, accès).\nCliquez sur « Y aller » pour choisir votre application GPS."
+                                    android:textColor="?attr/colorOutline"
+                                    android:textSize="11sp" />
+
+                            </LinearLayout>
+                        </ScrollView>
+
+                    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+                </LinearLayout>
+
+                <!-- 7. LXP TAB CONTAINER -->
+                <LinearLayout
+                    android:id="@+id/tabContainerLxp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                        android:id="@+id/swipeRefreshLxp"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <ScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:clipToPadding="false"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingTop="16dp"
+                            android:paddingBottom="24dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+
+
+                                <!-- Loading / Empty / Content states -->
+                                <LinearLayout
+                                    android:id="@+id/layoutLxpLoading"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:orientation="vertical"
+                                    android:paddingTop="32dp"
+                                    android:paddingBottom="32dp"
+                                    android:visibility="gone">
+
+                                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:indeterminate="true"
+                                        app:indicatorColor="?attr/colorPrimary" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="12dp"
+                                        android:text="Chargement des actions LXP..."
+                                        android:textColor="?attr/colorOnSurfaceVariant"
+                                        android:textSize="13sp" />
+                                </LinearLayout>
+
+                                <!-- Section title row with direct catalog button -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:layout_marginBottom="12dp">
+
+                                    <TextView
+                                        android:id="@+id/tvLxpSectionTitle"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="Actions suggérées"
+                                        android:textColor="?attr/colorPrimary"
+                                        android:textSize="14sp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnHeaderOpenCatalog"
+                                        style="@style/Widget.Material3.Button.TextButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="36dp"
+                                        android:text="Voir plus"
+                                        android:textSize="12sp"
+                                        app:icon="@drawable/ic_chevron_right"
+                                        app:iconGravity="textEnd"
+                                        app:iconSize="16dp" />
+
+                                </LinearLayout>
+
+                                <!-- Container for dynamic LXP Action cards -->
+                                <LinearLayout
+                                    android:id="@+id/layoutLxpList"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical" />
+
+                                <!-- Empty state -->
+                                <LinearLayout
+                                    android:id="@+id/layoutLxpEmpty"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:orientation="vertical"
+                                    android:paddingTop="36dp"
+                                    android:paddingBottom="36dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="48dp"
+                                        android:layout_height="48dp"
+                                        android:src="@drawable/ic_book"
+                                        app:tint="?attr/colorOutline" />
+
+                                    <TextView
+                                        android:id="@+id/tvLxpEmptyMessage"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="12dp"
+                                        android:gravity="center"
+                                        android:text="Aucune action disponible pour le moment."
+                                        android:textColor="?attr/colorOnSurfaceVariant"
+                                        android:textSize="13sp" />
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="16dp"
+                                        android:gravity="center"
+                                        android:orientation="horizontal">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnRetryLxp"
+                                            style="@style/Widget.Material3.Button.TonalButton"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="40dp"
+                                            android:layout_marginEnd="8dp"
+                                            android:text="Réessayer"
+                                            app:icon="@drawable/ic_refresh"
+                                            app:iconSize="18dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnOpenLxpCatalog"
+                                            style="@style/Widget.Material3.Button"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="40dp"
+                                            android:text="Ouvrir le catalogue"
+                                            app:icon="@drawable/ic_book"
+                                            app:iconSize="18dp" />
+
+                                    </LinearLayout>
+                                </LinearLayout>
+
+                                <!-- Discreet Footer Hint -->
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="24dp"
+                                    android:layout_marginBottom="16dp"
+                                    android:gravity="center"
+                                    android:lineSpacingExtra="3dp"
+                                    android:text="Les actions et cours sont synchronisés avec votre profil myEfrei LXP."
                                     android:textColor="?attr/colorOutline"
                                     android:textSize="11sp" />
 
