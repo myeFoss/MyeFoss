@@ -13,34 +13,13 @@
     app:strokeColor="?attr/colorOutlineVariant"
     app:cardBackgroundColor="?attr/colorSurface">
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Background Thumbnail Image with fade -->
-        <ImageView
-            android:id="@+id/ivActionBackground"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:alpha="0.45"
-            android:visibility="gone" />
-
-        <!-- Gradient Fade Overlay -->
-        <View
-            android:id="@+id/ivActionGradientOverlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/bg_lxp_image_fade"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-        <!-- Top row: Category tag & Status chip -->
+        <!-- Top row: Category tag + XP badge + Status chip -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -57,6 +36,24 @@
                 android:textSize="12sp"
                 android:text="Pédagogie / Ateliers" />
 
+            <!-- Dedicated XP Badge -->
+            <TextView
+                android:id="@+id/tvActionXpBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_xp_chip"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-bold"
+                android:visibility="gone"
+                android:text="+10 XP" />
+
+            <!-- Status Chip -->
             <TextView
                 android:id="@+id/tvActionStatusChip"
                 android:layout_width="wrap_content"
@@ -73,28 +70,54 @@
 
         </LinearLayout>
 
-        <!-- Action Title -->
-        <TextView
-            android:id="@+id/tvActionTitle"
+        <!-- Body row: Title + Description on left, Discrete Thumbnail on right -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif-bold"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
-            android:text="Titre de l'action LXP" />
+            android:orientation="horizontal">
 
-        <!-- Action Description -->
-        <TextView
-            android:id="@+id/tvActionDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="13sp"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:text="Description courte de l'action ou des objectifs de la session..." />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Action Title -->
+                <TextView
+                    android:id="@+id/tvActionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp"
+                    android:text="Titre de l'action LXP" />
+
+                <!-- Action Description -->
+                <TextView
+                    android:id="@+id/tvActionDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="13sp"
+                    android:maxLines="3"
+                    android:ellipsize="end"
+                    android:text="Description courte de l'action ou des objectifs de la session..." />
+
+            </LinearLayout>
+
+            <!-- Discrete Thumbnail (compact, rounded corners, modern) -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivActionThumbnail"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="12dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
+
+        </LinearLayout>
 
         <!-- Metadata row: Date, Room / Speaker -->
         <LinearLayout
@@ -121,10 +144,11 @@
                 android:text="Octobre 2026" />
 
             <View
+                android:id="@+id/viewMetaDivider"
                 android:layout_width="1dp"
                 android:layout_height="12dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
                 android:background="?attr/colorOutlineVariant" />
 
             <TextView
@@ -144,7 +168,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="12dp"
             android:gravity="end|center_vertical"
             android:orientation="horizontal">
 
@@ -168,8 +192,6 @@
 
         </LinearLayout>
 
-        </LinearLayout>
-
-    </FrameLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

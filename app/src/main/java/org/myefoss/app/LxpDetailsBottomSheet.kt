@@ -1,14 +1,21 @@
 package org.myefoss.app
 
-import android.content.Intent
-import android.net.Uri
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.imageview.ShapeableImageView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
 
@@ -52,8 +59,10 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
         val act = action ?: return
 
         val dialogLxpCategory: TextView = view.findViewById(R.id.dialogLxpCategory)
+        val dialogLxpXpBadge: TextView = view.findViewById(R.id.dialogLxpXpBadge)
         val dialogLxpStatusBadge: TextView = view.findViewById(R.id.dialogLxpStatusBadge)
         val dialogLxpTitle: TextView = view.findViewById(R.id.dialogLxpTitle)
+        val dialogLxpThumbnail: ShapeableImageView = view.findViewById(R.id.dialogLxpThumbnail)
         val dialogLxpDescription: TextView = view.findViewById(R.id.dialogLxpDescription)
 
         val dialogLxpDate: TextView = view.findViewById(R.id.dialogLxpDate)
@@ -61,13 +70,59 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
         val dialogLxpSpeaker: TextView = view.findViewById(R.id.dialogLxpSpeaker)
         val layoutDialogLxpLocation: View = view.findViewById(R.id.layoutDialogLxpLocation)
         val dialogLxpLocation: TextView = view.findViewById(R.id.dialogLxpLocation)
+        val layoutDialogLxpCapacity: View = view.findViewById(R.id.layoutDialogLxpCapacity)
+        val dialogLxpCapacity: TextView = view.findViewById(R.id.dialogLxpCapacity)
 
         val btnDialogLxpClose: MaterialButton = view.findViewById(R.id.btnDialogLxpClose)
         val btnDialogLxpRegister: MaterialButton = view.findViewById(R.id.btnDialogLxpRegister)
 
-        dialogLxpCategory.text = if (act.category.isNotBlank()) act.category else "Action pédagogique"
+        dialogLxpCategory.text = if (act.category.isNotBlank()) act.category else "Formation / Atelier"
         dialogLxpTitle.text = act.title
         dialogLxpDescription.text = if (act.description.isNotBlank()) act.description else "Aucune description détaillée fournie."
+
+        // XP Badge
+        if (act.xpPoints.isNotBlank()) {
+            dialogLxpXpBadge.text = if (act.xpPoints.startsWith("+")) act.xpPoints else "+${act.xpPoints}"
+            dialogLxpXpBadge.visibility = View.VISIBLE
+        } else {
+            dialogLxpXpBadge.visibility = View.GONE
+        }
+
+        // Thumbnail image
+        if (act.imageUrl.isNotBlank()) {
+            val rawUrl = act.imageUrl
+            val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+                rawUrl
+            } else {
+                "https://www.myefrei.fr" + (if (rawUrl.startsWith("/")) "" else "/") + rawUrl
+            }
+            lifecycleScope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    try {
+                        val conn = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                            val cookies = CookieManager.getInstance().getCookie("https://www.myefrei.fr")
+                            if (!cookies.isNullOrBlank()) {
+                                setRequestProperty("Cookie", cookies)
+                            }
+                            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                        }
+                        if (conn.responseCode in 200..299) {
+                            conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                        } else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                if (bitmap != null && isAdded) {
+                    dialogLxpThumbnail.setImageBitmap(bitmap)
+                    dialogLxpThumbnail.visibility = View.VISIBLE
+                }
+            }
+        } else {
+            dialogLxpThumbnail.visibility = View.GONE
+        }
 
         if (act.isRegistered) {
             dialogLxpStatusBadge.text = "Inscrit"
@@ -86,7 +141,7 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
         if (act.dateOrPeriod.isNotBlank()) {
             dialogLxpDate.text = act.dateOrPeriod
         } else {
-            dialogLxpDate.text = "Date non spécifiée"
+            dialogLxpDate.text = "Date à venir"
         }
 
         if (act.teacherOrSpeaker.isNotBlank()) {
@@ -101,6 +156,13 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
             dialogLxpLocation.text = act.locationOrRoom
         } else {
             layoutDialogLxpLocation.visibility = View.GONE
+        }
+
+        if (act.maxParticipants > 0) {
+            layoutDialogLxpCapacity.visibility = View.VISIBLE
+            dialogLxpCapacity.text = "${act.currentParticipants}/${act.maxParticipants} participants"
+        } else {
+            layoutDialogLxpCapacity.visibility = View.GONE
         }
 
         btnDialogLxpClose.setOnClickListener { dismiss() }

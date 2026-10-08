@@ -2146,16 +2146,26 @@ class MainActivity : AppCompatActivity() {
         filtered.forEach { action ->
             val view = inflater.inflate(R.layout.item_lxp_action_card, layoutLxpList, false)
             val tvCategory: TextView = view.findViewById(R.id.tvActionCategory)
+            val tvXpBadge: TextView = view.findViewById(R.id.tvActionXpBadge)
             val tvStatusChip: TextView = view.findViewById(R.id.tvActionStatusChip)
             val tvTitle: TextView = view.findViewById(R.id.tvActionTitle)
             val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
             val tvDate: TextView = view.findViewById(R.id.tvActionDate)
             val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
+            val ivThumbnail: com.google.android.material.imageview.ShapeableImageView = view.findViewById(R.id.ivActionThumbnail)
             val btnDetails: MaterialButton = view.findViewById(R.id.btnDetailsAction)
             val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
 
             tvCategory.text = if (action.category.isNotBlank()) action.category else "Formation / Atelier"
             tvTitle.text = action.title
+
+            // Dedicated XP Badge
+            if (action.xpPoints.isNotBlank()) {
+                tvXpBadge.text = if (action.xpPoints.startsWith("+")) action.xpPoints else "+${action.xpPoints}"
+                tvXpBadge.visibility = View.VISIBLE
+            } else {
+                tvXpBadge.visibility = View.GONE
+            }
 
             if (action.description.isNotBlank()) {
                 tvDescription.visibility = View.VISIBLE
@@ -2193,9 +2203,7 @@ class MainActivity : AppCompatActivity() {
                 tvExtra.visibility = View.GONE
             }
 
-            val ivBg: ImageView = view.findViewById(R.id.ivActionBackground)
-            val ivOverlay: View = view.findViewById(R.id.ivActionGradientOverlay)
-
+            // Discreet Thumbnail Image
             if (action.imageUrl.isNotBlank()) {
                 val rawUrl = action.imageUrl
                 val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
@@ -2223,21 +2231,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     if (bitmap != null) {
-                        ivBg.setImageBitmap(bitmap)
-                        ivBg.visibility = View.VISIBLE
-                        ivOverlay.visibility = View.VISIBLE
+                        ivThumbnail.setImageBitmap(bitmap)
+                        ivThumbnail.visibility = View.VISIBLE
                     }
                 }
             } else {
-                ivBg.visibility = View.GONE
-                ivOverlay.visibility = View.GONE
-            }
-
-            if (extraParts.isNotEmpty()) {
-                tvExtra.text = extraParts.joinToString(" • ")
-                tvExtra.visibility = View.VISIBLE
-            } else {
-                tvExtra.visibility = View.GONE
+                ivThumbnail.visibility = View.GONE
             }
 
             // Click card or details button to open details sheet
@@ -2265,26 +2264,19 @@ class MainActivity : AppCompatActivity() {
             action.id.isNotBlank() -> "https://www.myefrei.fr/portal/student/lxp/catalog/${action.id}"
             else -> "https://www.myefrei.fr/portal/student/lxp/catalog/"
         }
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Impossible d'ouvrir le lien d'inscription", Toast.LENGTH_SHORT).show()
+        val resolvedUrl = if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+            targetUrl
+        } else {
+            "https://www.myefrei.fr" + (if (targetUrl.startsWith("/")) "" else "/") + targetUrl
         }
+        val webDialog = LxpWebDialogFragment.newInstance(resolvedUrl, action.title)
+        webDialog.show(supportFragmentManager, "LxpWebDialog_${action.id}")
     }
 
     private fun openLxpWebCatalog() {
         val catalogUrl = "https://www.myefrei.fr/portal/student/lxp/catalog/"
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(catalogUrl)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Impossible d'ouvrir le catalogue LXP", Toast.LENGTH_SHORT).show()
-        }
+        val webDialog = LxpWebDialogFragment.newInstance(catalogUrl, "Catalogue LXP")
+        webDialog.show(supportFragmentManager, "LxpWebCatalogDialog")
     }
 
     private suspend fun fetchLxpActionsFromApi(): List<LxpAction> {
@@ -2513,7 +2505,9 @@ class MainActivity : AppCompatActivity() {
                             !lowerTitle.includes('learningxp') &&
                             !lowerTitle.includes('actions suggérées') &&
                             !lowerTitle.includes('catalogue') &&
-                            !lowerTitle.includes('connexion')) {
+                            !lowerTitle.includes('connexion') &&
+                            !lowerTitle.includes('accueil') &&
+                            !lowerTitle.includes('déconnexion')) {
                             var fullText = (el.innerText || '').trim();
                             var link = el.getAttribute('href') || (el.querySelector('a') ? el.querySelector('a').getAttribute('href') : '');
                             
@@ -2523,6 +2517,33 @@ class MainActivity : AppCompatActivity() {
                             var badge = el.querySelector('[class*="badge"], [class*="chip"], [class*="tag"], [class*="status"]');
                             if (badge) {
                                 status = badge.innerText.trim();
+                            }
+                            
+                            // Extract XP points
+                            var xp = '';
+                            var xpMatch = fullText.match(/([+]?\s*\d+\s*(?:XP|xp|LXP|lxp|points|pts))/i);
+                            if (xpMatch) {
+                                xp = xpMatch[1].trim();
+                            }
+
+                            // Extract date or period
+                            var dateStr = '';
+                            var dateMatch = fullText.match(/(\d{1,2}\s+(?:janv|févr|mars|avr|mai|juin|juil|août|sept|oct|nov|déc)[a-z]*\s*(?:\d{4})?)/i) ||
+                                            fullText.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/);
+                            if (dateMatch) {
+                                dateStr = dateMatch[1].trim();
+                            }
+
+                            // Clean description: strip title, status, xp, and buttons
+                            var cleanedDesc = fullText.replace(title, '');
+                            if (xp) cleanedDesc = cleanedDesc.replace(xp, '');
+                            cleanedDesc = cleanedDesc.replace(/(?:S'inscrire|Inscrit|Détails|En savoir plus|Disponible|Clôturé|Fermé)/gi, ' ');
+                            cleanedDesc = cleanedDesc.replace(/\s+/g, ' ').trim();
+                            if (cleanedDesc.length > 220) {
+                                cleanedDesc = cleanedDesc.substring(0, 220) + '...';
+                            }
+                            if (cleanedDesc.length < 5 || /^[^a-zA-Z0-9]+$/.test(cleanedDesc)) {
+                                cleanedDesc = '';
                             }
                             
                             // Extract image or thumbnail if present
@@ -2539,9 +2560,11 @@ class MainActivity : AppCompatActivity() {
                             items.push({
                                 id: 'item_' + i,
                                 title: title,
-                                description: fullText.replace(title, '').trim().substring(0, 200),
+                                description: cleanedDesc,
                                 category: cat || 'Formation',
                                 status: status,
+                                xpPoints: xp,
+                                date: dateStr,
                                 detailUrl: link || '',
                                 imageUrl: imgUrl || '',
                                 canRegister: true

@@ -322,6 +322,7 @@ object OfflineCacheManager {
                     put("teacherOrSpeaker", a.teacherOrSpeaker)
                     put("maxParticipants", a.maxParticipants)
                     put("currentParticipants", a.currentParticipants)
+                    put("xpPoints", a.xpPoints)
                     put("detailUrl", a.detailUrl)
                     put("registrationUrl", a.registrationUrl)
                     put("imageUrl", a.imageUrl)

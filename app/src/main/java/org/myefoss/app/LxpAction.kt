@@ -15,6 +15,7 @@ data class LxpAction(
     val teacherOrSpeaker: String = "",
     val maxParticipants: Int = 0,
     val currentParticipants: Int = 0,
+    val xpPoints: String = "",
     val detailUrl: String = "",
     val registrationUrl: String = "",
     val imageUrl: String = ""
@@ -33,6 +34,16 @@ data class LxpAction(
             val speaker = json.optString("speaker", json.optString("teacher", json.optString("instructor", "")))
             val maxP = json.optInt("maxParticipants", json.optInt("capacity", 0))
             val curP = json.optInt("currentParticipants", json.optInt("enrolled", 0))
+            
+            // Points / XP resolution
+            var xp = json.optString("xpPoints", json.optString("xp", json.optString("points", "")))
+            if (xp.isBlank()) {
+                val xpNum = json.optInt("xp", json.optInt("points", -1))
+                if (xpNum > 0) {
+                    xp = "$xpNum XP"
+                }
+            }
+
             val detailUrl = json.optString("url", json.optString("detailUrl", ""))
             val regUrl = json.optString("registrationUrl", json.optString("subscribeUrl", ""))
             val imgUrl = json.optString("imageUrl", json.optString("image", json.optString("thumbnail", json.optString("picture", ""))))
@@ -50,6 +61,7 @@ data class LxpAction(
                 teacherOrSpeaker = speaker,
                 maxParticipants = maxP,
                 currentParticipants = curP,
+                xpPoints = xp,
                 detailUrl = detailUrl,
                 registrationUrl = regUrl,
                 imageUrl = imgUrl
