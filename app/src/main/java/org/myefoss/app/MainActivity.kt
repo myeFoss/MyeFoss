@@ -2,12 +2,16 @@ package org.myefoss.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -53,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutLoginScreen: LinearLayout
     private lateinit var layoutLoading: FrameLayout
     private lateinit var loginWebView: WebView
+    private var tvDrawerUserName: TextView? = null
+    private var tvDrawerUserEmail: TextView? = null
 
     // Toolbar views
     private lateinit var btnMenuDrawer: MaterialButton
@@ -67,10 +73,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainerGrades: LinearLayout
     private lateinit var tabContainerAbsences: LinearLayout
     private lateinit var tabContainerCampus: LinearLayout
+    private lateinit var tabContainerLxp: LinearLayout
 
     // Campus views
     private lateinit var layoutCampusList: LinearLayout
     private lateinit var swipeRefreshCampus: SwipeRefreshLayout
+
+    // LXP views
+    private lateinit var layoutLxpList: LinearLayout
+    private lateinit var swipeRefreshLxp: SwipeRefreshLayout
+    private lateinit var layoutLxpLoading: LinearLayout
+    private lateinit var layoutLxpEmpty: LinearLayout
+    private lateinit var tvLxpEmptyMessage: TextView
+    private lateinit var btnHeaderOpenCatalog: MaterialButton
+    private lateinit var btnOpenLxpCatalog: MaterialButton
+    private lateinit var btnRetryLxp: MaterialButton
 
     // Grades views
     private lateinit var btnBackFromGrades: MaterialButton
@@ -133,6 +150,8 @@ class MainActivity : AppCompatActivity() {
 
     // Login
     private lateinit var btnLogin: MaterialButton
+    private lateinit var bannerSessionExpired: MaterialCardView
+    private lateinit var btnBannerReconnect: MaterialButton
 
     private lateinit var adapter: AgendaAdapter
     private var currentWeekCal: Calendar = Calendar.getInstance(Locale.FRANCE)
@@ -178,6 +197,10 @@ class MainActivity : AppCompatActivity() {
             displayPlanning(allCachedCourses)
         }
         cachedStudentPeriods = OfflineCacheManager.loadStudentPeriods(this)
+        val cachedProfile = OfflineCacheManager.loadStudentProfile(this)
+        if (cachedProfile != null) {
+            displayUserProfile(cachedProfile)
+        }
 
         // Restore active screen after theme recreation
         val lastScreen = prefs.getString("last_active_screen", "planning")
@@ -230,6 +253,11 @@ class MainActivity : AppCompatActivity() {
     private fun initViews() {
         drawerLayout = findViewById(R.id.drawerLayout)
         navigationDrawer = findViewById(R.id.navigationDrawer)
+        val headerView = navigationDrawer.getHeaderView(0)
+        if (headerView != null) {
+            tvDrawerUserName = headerView.findViewById(R.id.tvDrawerUserName)
+            tvDrawerUserEmail = headerView.findViewById(R.id.tvDrawerUserEmail)
+        }
         bottomNavigation = findViewById(R.id.bottomNavigation)
         layoutAppScreen = findViewById(R.id.layoutAppScreen)
         layoutLoginScreen = findViewById(R.id.layoutLoginScreen)
@@ -247,9 +275,19 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades = findViewById(R.id.tabContainerGrades)
         tabContainerAbsences = findViewById(R.id.tabContainerAbsences)
         tabContainerCampus = findViewById(R.id.tabContainerCampus)
+        tabContainerLxp = findViewById(R.id.tabContainerLxp)
 
         layoutCampusList = findViewById(R.id.layoutCampusList)
         swipeRefreshCampus = findViewById(R.id.swipeRefreshCampus)
+
+        layoutLxpList = findViewById(R.id.layoutLxpList)
+        swipeRefreshLxp = findViewById(R.id.swipeRefreshLxp)
+        layoutLxpLoading = findViewById(R.id.layoutLxpLoading)
+        layoutLxpEmpty = findViewById(R.id.layoutLxpEmpty)
+        tvLxpEmptyMessage = findViewById(R.id.tvLxpEmptyMessage)
+        btnHeaderOpenCatalog = findViewById(R.id.btnHeaderOpenCatalog)
+        btnOpenLxpCatalog = findViewById(R.id.btnOpenLxpCatalog)
+        btnRetryLxp = findViewById(R.id.btnRetryLxp)
 
         btnBackFromGrades = findViewById(R.id.btnBackFromGrades)
         btnRefreshGrades = findViewById(R.id.btnRefreshGrades)
@@ -308,6 +346,8 @@ class MainActivity : AppCompatActivity() {
         cardCampus = findViewById(R.id.cardCampus)
 
         btnLogin = findViewById(R.id.btnLogin)
+        bannerSessionExpired = findViewById(R.id.bannerSessionExpired)
+        btnBannerReconnect = findViewById(R.id.btnBannerReconnect)
     }
 
     private fun setupListeners() {
@@ -335,7 +375,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.drawer_lxp -> {
-                    showScolarityFeature("LXP / E-learning")
+                    openLxpScreen()
                     true
                 }
                 R.id.drawer_campus -> {
@@ -414,8 +454,12 @@ class MainActivity : AppCompatActivity() {
 
         cardGrades.setOnClickListener { openGradesScreen() }
         cardAbsences.setOnClickListener { openAbsencesScreen() }
-        cardLxp.setOnClickListener { showScolarityFeature("LXP / E-learning") }
+        cardLxp.setOnClickListener { openLxpScreen() }
         cardCampus.setOnClickListener { showCampusTab() }
+
+        btnBannerReconnect.setOnClickListener {
+            startWebSsoLogin()
+        }
 
         btnBackFromGrades.setOnClickListener {
             showScolarityTab()
@@ -445,6 +489,22 @@ class MainActivity : AppCompatActivity() {
             loadCampusesList(isSwipe = true)
         }
 
+        swipeRefreshLxp.setOnRefreshListener {
+            loadLxpActions(isSwipe = true)
+        }
+
+        btnHeaderOpenCatalog.setOnClickListener {
+            openLxpWebCatalog()
+        }
+
+        btnOpenLxpCatalog.setOnClickListener {
+            openLxpWebCatalog()
+        }
+
+        btnRetryLxp.setOnClickListener {
+            loadLxpActions(isSwipe = false)
+        }
+
         setupThemeSettings()
 
         btnLogin.setOnClickListener {
@@ -460,6 +520,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Planning"
         btnRefresh.visibility = View.VISIBLE
         bottomNavigation.menu.findItem(R.id.nav_planning)?.isChecked = true
@@ -474,6 +535,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Scolarité"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_scolarity)?.isChecked = true
@@ -489,12 +551,29 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.VISIBLE
+        tabContainerLxp.visibility = View.GONE
         tvToolbarTitle.text = "Campus"
         btnRefresh.visibility = View.GONE
         bottomNavigation.menu.findItem(R.id.nav_campus)?.isChecked = true
         navigationDrawer.setCheckedItem(R.id.drawer_campus)
 
         loadCampusesList()
+    }
+
+    private fun openLxpScreen() {
+        getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putString("last_active_screen", "lxp").apply()
+        tabContainerPlanning.visibility = View.GONE
+        tabContainerScolarity.visibility = View.GONE
+        tabContainerSettings.visibility = View.GONE
+        tabContainerGrades.visibility = View.GONE
+        tabContainerAbsences.visibility = View.GONE
+        tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.VISIBLE
+        tvToolbarTitle.text = "LXP / E-learning"
+        btnRefresh.visibility = View.GONE
+        navigationDrawer.setCheckedItem(R.id.drawer_lxp)
+
+        loadLxpActions()
     }
 
     private fun openSettingsScreen() {
@@ -504,6 +583,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerGrades.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerSettings.visibility = View.VISIBLE
         tvToolbarTitle.text = "Paramètres"
         btnRefresh.visibility = View.GONE
@@ -517,6 +597,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerAbsences.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerGrades.visibility = View.VISIBLE
         tvToolbarTitle.text = "Notes & Résultats"
         btnRefresh.visibility = View.GONE
@@ -532,6 +613,7 @@ class MainActivity : AppCompatActivity() {
         tabContainerSettings.visibility = View.GONE
         tabContainerGrades.visibility = View.GONE
         tabContainerCampus.visibility = View.GONE
+        tabContainerLxp.visibility = View.GONE
         tabContainerAbsences.visibility = View.VISIBLE
         tvToolbarTitle.text = "Suivi des Absences"
         btnRefresh.visibility = View.GONE
@@ -1994,6 +2076,561 @@ class MainActivity : AppCompatActivity() {
         return list
     }
 
+    private fun loadLxpActions(isSwipe: Boolean = false) {
+        if (!isSwipe) {
+            layoutLxpList.removeAllViews()
+            layoutLxpLoading.visibility = View.VISIBLE
+            layoutLxpEmpty.visibility = View.GONE
+        }
+
+        // 1. Load cached actions
+        val cached = OfflineCacheManager.loadLxpActions(this)
+        if (cached.isNotEmpty()) {
+            displayLxpActions(cached)
+            layoutLxpLoading.visibility = View.GONE
+        }
+
+        if (isSwipe) {
+            swipeRefreshLxp.isRefreshing = true
+        }
+
+        // 2. Fetch fresh actions in background
+        lifecycleScope.launch {
+            try {
+                val fresh = fetchLxpActionsFromApi()
+                layoutLxpLoading.visibility = View.GONE
+                if (fresh.isNotEmpty()) {
+                    showSessionExpiredBanner(false)
+                    OfflineCacheManager.saveLxpActions(this@MainActivity, fresh)
+                    displayLxpActions(fresh)
+                } else if (cached.isEmpty()) {
+                    layoutLxpEmpty.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
+                    showSessionExpiredBanner(true)
+                }
+                layoutLxpLoading.visibility = View.GONE
+                if (cached.isEmpty()) {
+                    layoutLxpEmpty.visibility = View.VISIBLE
+                    tvLxpEmptyMessage.text = "Impossible de charger les actions LXP (connexion ou session requise)."
+                }
+            } finally {
+                swipeRefreshLxp.isRefreshing = false
+            }
+        }
+    }
+
+    private fun displayLxpActions(actions: List<LxpAction>) {
+        layoutLxpList.removeAllViews()
+        val filtered = actions.filter {
+            val t = it.title.trim().lowercase(Locale.FRANCE)
+            t.length >= 3 &&
+                t != "learning xp" &&
+                t != "learningxp" &&
+                t != "lxp" &&
+                t != "actions suggérées" &&
+                t != "catalogue" &&
+                t != "connexion" &&
+                !t.startsWith("learning xp") &&
+                !t.startsWith("learningxp")
+        }
+
+        if (filtered.isEmpty()) {
+            layoutLxpEmpty.visibility = View.VISIBLE
+            return
+        }
+        layoutLxpEmpty.visibility = View.GONE
+        val inflater = LayoutInflater.from(this)
+
+        filtered.forEach { action ->
+            val view = inflater.inflate(R.layout.item_lxp_action_card, layoutLxpList, false)
+            val tvCategory: TextView = view.findViewById(R.id.tvActionCategory)
+            val tvStatusChip: TextView = view.findViewById(R.id.tvActionStatusChip)
+            val tvTitle: TextView = view.findViewById(R.id.tvActionTitle)
+            val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
+            val tvDate: TextView = view.findViewById(R.id.tvActionDate)
+            val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
+            val btnDetails: MaterialButton = view.findViewById(R.id.btnDetailsAction)
+            val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
+
+            tvCategory.text = if (action.category.isNotBlank()) action.category else "Formation / Atelier"
+            tvTitle.text = action.title
+
+            if (action.description.isNotBlank()) {
+                tvDescription.visibility = View.VISIBLE
+                tvDescription.text = action.description
+            } else {
+                tvDescription.visibility = View.GONE
+            }
+
+            if (action.isRegistered) {
+                tvStatusChip.text = "Inscrit"
+                btnRegister.text = "Inscrit"
+                btnRegister.isEnabled = false
+            } else if (!action.canRegister) {
+                tvStatusChip.text = "Clôturé"
+                btnRegister.text = "Fermé"
+                btnRegister.isEnabled = false
+            } else {
+                tvStatusChip.text = if (action.status.isNotBlank()) action.status else "Disponible"
+                btnRegister.text = "S'inscrire"
+                btnRegister.isEnabled = true
+            }
+
+            tvDate.text = if (action.dateOrPeriod.isNotBlank()) action.dateOrPeriod else "Date à venir"
+
+            val extraParts = mutableListOf<String>()
+            if (action.teacherOrSpeaker.isNotBlank()) extraParts.add(action.teacherOrSpeaker)
+            if (action.locationOrRoom.isNotBlank()) extraParts.add(action.locationOrRoom)
+            if (action.maxParticipants > 0) {
+                extraParts.add("${action.currentParticipants}/${action.maxParticipants} inscrits")
+            }
+            if (extraParts.isNotEmpty()) {
+                tvExtra.visibility = View.VISIBLE
+                tvExtra.text = extraParts.joinToString(" • ")
+            } else {
+                tvExtra.visibility = View.GONE
+            }
+
+            val ivBg: ImageView = view.findViewById(R.id.ivActionBackground)
+            val ivOverlay: View = view.findViewById(R.id.ivActionGradientOverlay)
+
+            if (action.imageUrl.isNotBlank()) {
+                val rawUrl = action.imageUrl
+                val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+                    rawUrl
+                } else {
+                    "https://www.myefrei.fr" + (if (rawUrl.startsWith("/")) "" else "/") + rawUrl
+                }
+                lifecycleScope.launch {
+                    val bitmap = withContext(Dispatchers.IO) {
+                        try {
+                            val conn = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 8000
+                                readTimeout = 8000
+                                val cookies = CookieManager.getInstance().getCookie("https://www.myefrei.fr")
+                                if (!cookies.isNullOrBlank()) {
+                                    setRequestProperty("Cookie", cookies)
+                                }
+                                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                            }
+                            if (conn.responseCode in 200..299) {
+                                conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                            } else null
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    if (bitmap != null) {
+                        ivBg.setImageBitmap(bitmap)
+                        ivBg.visibility = View.VISIBLE
+                        ivOverlay.visibility = View.VISIBLE
+                    }
+                }
+            } else {
+                ivBg.visibility = View.GONE
+                ivOverlay.visibility = View.GONE
+            }
+
+            if (extraParts.isNotEmpty()) {
+                tvExtra.text = extraParts.joinToString(" • ")
+                tvExtra.visibility = View.VISIBLE
+            } else {
+                tvExtra.visibility = View.GONE
+            }
+
+            // Click card or details button to open details sheet
+            val openSheet = {
+                LxpDetailsBottomSheet.newInstance(action) { act ->
+                    handleActionRegistration(act)
+                }.show(supportFragmentManager, "LxpDetails_${action.id}")
+            }
+
+            view.setOnClickListener { openSheet() }
+            btnDetails.setOnClickListener { openSheet() }
+
+            btnRegister.setOnClickListener {
+                handleActionRegistration(action)
+            }
+
+            layoutLxpList.addView(view)
+        }
+    }
+
+    private fun handleActionRegistration(action: LxpAction) {
+        val targetUrl = when {
+            action.registrationUrl.isNotBlank() -> action.registrationUrl
+            action.detailUrl.isNotBlank() -> action.detailUrl
+            action.id.isNotBlank() -> "https://www.myefrei.fr/portal/student/lxp/catalog/${action.id}"
+            else -> "https://www.myefrei.fr/portal/student/lxp/catalog/"
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossible d'ouvrir le lien d'inscription", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun openLxpWebCatalog() {
+        val catalogUrl = "https://www.myefrei.fr/portal/student/lxp/catalog/"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(catalogUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossible d'ouvrir le catalogue LXP", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun fetchLxpActionsFromApi(): List<LxpAction> {
+        // Step 1: Direct HTTP endpoints (REST / HTML)
+        val httpActions = withContext(Dispatchers.IO) {
+            fetchLxpFromHttp()
+        }
+        if (httpActions.isNotEmpty()) {
+            return httpActions
+        }
+
+        // Step 2: Headless WebView scraper with JavaScript execution
+        return withContext(Dispatchers.Main) {
+            fetchLxpFromHeadlessWeb()
+        }
+    }
+
+    private fun fetchLxpFromHttp(): List<LxpAction> {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/portal/student/lxp") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf("=")
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val list = mutableListOf<LxpAction>()
+
+        val endpointsToTry = listOf(
+            "https://www.myefrei.fr/api/rest/student/lxp/catalog",
+            "https://www.myefrei.fr/api/rest/student/lxp",
+            "https://www.myefrei.fr/api/rest/student/lxp/actions",
+            "https://www.myefrei.fr/api/rest/student/catalog",
+            "https://www.myefrei.fr/portal/student/lxp/catalog/",
+            "https://www.myefrei.fr/portal/student/lxp"
+        )
+
+        for (endpoint in endpointsToTry) {
+            try {
+                val conn = URL(endpoint).openConnection() as HttpURLConnection
+                conn.connectTimeout = 6000
+                conn.readTimeout = 6000
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                conn.setRequestProperty("Accept", "application/json, text/html, */*")
+                conn.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+                if (mergedCookies.isNotBlank()) {
+                    conn.setRequestProperty("Cookie", mergedCookies)
+                }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val raw = conn.inputStream.bufferedReader().use { it.readText() }
+                    val trimmed = raw.trim()
+
+                    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                        val parsed = parseLxpJson(trimmed)
+                        if (parsed.isNotEmpty()) {
+                            list.addAll(parsed)
+                            break
+                        }
+                    }
+
+                    val fromHtml = parseLxpFromHtml(trimmed)
+                    if (fromHtml.isNotEmpty()) {
+                        list.addAll(fromHtml)
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore and continue to next endpoint
+            }
+        }
+        return list
+    }
+
+    private suspend fun fetchLxpFromHeadlessWeb(): List<LxpAction> = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        try {
+            var resumed = false
+            val webView = WebView(this@MainActivity)
+
+            fun finish(result: List<LxpAction>) {
+                if (!resumed) {
+                    resumed = true
+                    try {
+                        webView.stopLoading()
+                        webView.destroy()
+                    } catch (e: Exception) {}
+                    if (cont.isActive) {
+                        cont.resume(result, onCancellation = null)
+                    }
+                }
+            }
+
+            // Safety timeout after 10 seconds
+            val timeoutHandler = Handler(Looper.getMainLooper())
+            val timeoutRunnable = Runnable {
+                finish(emptyList())
+            }
+            timeoutHandler.postDelayed(timeoutRunnable, 10000)
+
+            cont.invokeOnCancellation {
+                timeoutHandler.removeCallbacks(timeoutRunnable)
+                try {
+                    webView.stopLoading()
+                    webView.destroy()
+                } catch (e: Exception) {}
+            }
+
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+            cookieManager.setAcceptThirdPartyCookies(webView, true)
+            cookieManager.flush()
+
+            val settings = webView.settings
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+
+            class LxpJsBridge {
+                @JavascriptInterface
+                fun onScraped(jsonStr: String) {
+                    val actions = parseLxpJson(jsonStr)
+                    if (actions.isNotEmpty()) {
+                        timeoutHandler.removeCallbacks(timeoutRunnable)
+                        Handler(Looper.getMainLooper()).post {
+                            finish(actions)
+                        }
+                    }
+                }
+            }
+
+            webView.addJavascriptInterface(LxpJsBridge(), "LxpBridge")
+
+            var hasTriedCatalog = false
+
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    val currentUrl = url ?: ""
+
+                    // If redirected to login/SSO portal, let it settle or redirect back
+                    if (currentUrl.contains("/auth/efrei")) {
+                        return
+                    }
+
+                    // Schedule multiple DOM extraction passes to catch asynchronous React hydrate
+                    listOf(1000L, 2500L, 4000L).forEach { delayMs ->
+                        timeoutHandler.postDelayed({
+                            if (!resumed) {
+                                executeLxpExtractorScript(webView)
+                            }
+                        }, delayMs)
+                    }
+
+                    // If after 4.5s still empty on /lxp, try /portal/student/lxp/catalog/
+                    if (!hasTriedCatalog && currentUrl.endsWith("/lxp")) {
+                        hasTriedCatalog = true
+                        timeoutHandler.postDelayed({
+                            if (!resumed) {
+                                webView.loadUrl("https://www.myefrei.fr/portal/student/lxp/catalog/")
+                            }
+                        }, 4500)
+                    }
+                }
+            }
+
+            webView.loadUrl("https://www.myefrei.fr/portal/student/lxp")
+        } catch (e: Exception) {
+            if (cont.isActive) {
+                cont.resume(emptyList(), onCancellation = null)
+            }
+        }
+    }
+
+    private fun executeLxpExtractorScript(webView: WebView) {
+        val js = """
+            (function() {
+                try {
+                    // 1. Next.js props inspection
+                    var nextData = document.getElementById('__NEXT_DATA__');
+                    if (nextData) {
+                        try {
+                            var json = JSON.parse(nextData.textContent);
+                            var props = json.props && json.props.pageProps;
+                            if (props) {
+                                window.LxpBridge.onScraped(JSON.stringify(props));
+                            }
+                        } catch(e) {}
+                    }
+
+                    // 2. Global state or window variables (Redux / Apollo / React Query cache)
+                    if (window.__PRELOADED_STATE__) {
+                        window.LxpBridge.onScraped(JSON.stringify(window.__PRELOADED_STATE__));
+                    }
+
+                    // 3. Search for card containers & action elements anywhere in DOM
+                    var items = [];
+                    var selectors = [
+                        'div[class*="card"]', 'div[class*="action"]', 'div[class*="item"]',
+                        'div[class*="catalog"]', 'div[class*="course"]', 'div[class*="Module"]',
+                        'a[href*="/lxp"]', 'a[href*="/catalog"]', 'article', 'tr'
+                    ];
+                    var elements = document.querySelectorAll(selectors.join(', '));
+                    elements.forEach(function(el, i) {
+                        var h = el.querySelector('h1, h2, h3, h4, h5, h6, strong, b, [class*="title"], [class*="Title"]');
+                        var title = h ? (h.innerText || '').trim() : '';
+                        if (!title && el.tagName === 'A') {
+                            title = (el.innerText || '').trim().split('\n')[0];
+                        }
+                        var lowerTitle = title.toLowerCase();
+                        if (title && title.length > 3 && title.length < 120 &&
+                            !lowerTitle.includes('learning xp') &&
+                            !lowerTitle.includes('learningxp') &&
+                            !lowerTitle.includes('actions suggérées') &&
+                            !lowerTitle.includes('catalogue') &&
+                            !lowerTitle.includes('connexion')) {
+                            var fullText = (el.innerText || '').trim();
+                            var link = el.getAttribute('href') || (el.querySelector('a') ? el.querySelector('a').getAttribute('href') : '');
+                            
+                            // Extract metadata badges if present
+                            var cat = '';
+                            var status = 'Disponible';
+                            var badge = el.querySelector('[class*="badge"], [class*="chip"], [class*="tag"], [class*="status"]');
+                            if (badge) {
+                                status = badge.innerText.trim();
+                            }
+                            
+                            // Extract image or thumbnail if present
+                            var imgEl = el.querySelector('img');
+                            var imgUrl = imgEl ? (imgEl.src || imgEl.getAttribute('data-src') || '') : '';
+                            if (!imgUrl) {
+                                var bgEl = el.querySelector('[style*="background-image"]');
+                                if (bgEl && bgEl.style && bgEl.style.backgroundImage) {
+                                    var bgMatch = bgEl.style.backgroundImage.match(/url\(["']?([^"']*)["']?\)/);
+                                    if (bgMatch) imgUrl = bgMatch[1];
+                                }
+                            }
+                            
+                            items.push({
+                                id: 'item_' + i,
+                                title: title,
+                                description: fullText.replace(title, '').trim().substring(0, 200),
+                                category: cat || 'Formation',
+                                status: status,
+                                detailUrl: link || '',
+                                imageUrl: imgUrl || '',
+                                canRegister: true
+                            });
+                        }
+                    });
+
+                    if (items.length > 0) {
+                        // Deduplicate items by title
+                        var uniqueMap = {};
+                        var deduped = [];
+                        items.forEach(function(it) {
+                            if (!uniqueMap[it.title]) {
+                                uniqueMap[it.title] = true;
+                                deduped.push(it);
+                            }
+                        });
+                        window.LxpBridge.onScraped(JSON.stringify(deduped));
+                    }
+                } catch(e) {}
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
+
+    private fun parseLxpJson(rawJson: String): List<LxpAction> {
+        val list = mutableListOf<LxpAction>()
+        try {
+            val trimmed = rawJson.trim()
+            if (trimmed.startsWith("[")) {
+                val array = JSONArray(trimmed)
+                for (i in 0 until array.length()) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    list.add(LxpAction.fromJson(obj))
+                }
+            } else if (trimmed.startsWith("{")) {
+                val obj = JSONObject(trimmed)
+                val array = obj.optJSONArray("actions")
+                    ?: obj.optJSONArray("data")
+                    ?: obj.optJSONArray("items")
+                    ?: obj.optJSONArray("catalog")
+                    ?: obj.optJSONArray("courses")
+                    ?: obj.optJSONArray("suggestedActions")
+                if (array != null) {
+                    for (i in 0 until array.length()) {
+                        val item = array.optJSONObject(i) ?: continue
+                        list.add(LxpAction.fromJson(item))
+                    }
+                } else {
+                    val keys = obj.keys()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        val subArr = obj.optJSONArray(k)
+                        if (subArr != null && subArr.length() > 0 && subArr.optJSONObject(0) != null) {
+                            for (i in 0 until subArr.length()) {
+                                val item = subArr.optJSONObject(i) ?: continue
+                                list.add(LxpAction.fromJson(item))
+                            }
+                            if (list.isNotEmpty()) break
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+        return list
+    }
+
+    private fun parseLxpFromHtml(html: String): List<LxpAction> {
+        val list = mutableListOf<LxpAction>()
+        try {
+            val nextDataRegex = Regex("<script id=\"__NEXT_DATA__\" type=\"application/json\">([\\s\\S]*?)</script>")
+            val match = nextDataRegex.find(html)
+            if (match != null) {
+                val jsonStr = match.groupValues[1].trim()
+                val nextObj = JSONObject(jsonStr)
+                val pageProps = nextObj.optJSONObject("props")?.optJSONObject("pageProps")
+                if (pageProps != null) {
+                    val parsed = parseLxpJson(pageProps.toString())
+                    if (parsed.isNotEmpty()) return parsed
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+        return list
+    }
+
 
     private fun updateExpandState() {
         if (isMonthExpanded) {
@@ -2029,9 +2666,195 @@ class MainActivity : AppCompatActivity() {
         if (!isExplicitlyLoggedOut && (cookies.contains("myefrei.sid") || allCachedCourses.isNotEmpty())) {
             showScreen(Screen.APP)
             loadAgendaForCurrentWeek()
+            fetchAndDisplayUserProfile()
         } else {
             showScreen(Screen.LOGIN)
         }
+    }
+
+    private fun displayUserProfile(profile: StudentProfile) {
+        val displayName = when {
+            profile.fullName.isNotBlank() -> profile.fullName
+            profile.firstName.isNotBlank() && profile.lastName.isNotBlank() -> "${profile.firstName} ${profile.lastName}"
+            profile.firstName.isNotBlank() -> profile.firstName
+            else -> "Étudiant"
+        }
+        tvDrawerUserName?.text = displayName
+        tvStudentSubtitle.text = displayName
+        if (profile.email.isNotBlank()) {
+            tvDrawerUserEmail?.text = profile.email
+        } else if (profile.program.isNotBlank()) {
+            tvDrawerUserEmail?.text = profile.program
+        }
+    }
+
+    private fun showSessionExpiredBanner(show: Boolean) {
+        runOnUiThread {
+            bannerSessionExpired.visibility = if (show) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun fetchAndDisplayUserProfile() {
+        lifecycleScope.launch {
+            val profile = withContext(Dispatchers.IO) {
+                fetchStudentProfileFromApi() ?: fetchStudentProfileFromHome()
+            }
+            if (profile != null) {
+                OfflineCacheManager.saveStudentProfile(this@MainActivity, profile)
+                displayUserProfile(profile)
+            }
+        }
+    }
+
+    private fun fetchStudentProfileFromApi(): StudentProfile? {
+        val cookieManager = CookieManager.getInstance()
+        val directCookies = cookieManager.getCookie("https://www.myefrei.fr/api/rest/student/user/info") ?: ""
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies, directCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val profileEndpoints = listOf(
+            "https://www.myefrei.fr/api/rest/student/user/info",
+            "https://www.myefrei.fr/api/rest/student/user",
+            "https://www.myefrei.fr/api/rest/user/info"
+        )
+
+        for (endpoint in profileEndpoints) {
+            try {
+                val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    setRequestProperty("Accept", "application/json, text/plain, */*")
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/portal/student/home")
+                    setRequestProperty("Origin", "https://www.myefrei.fr")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                if (conn.responseCode in 200..299) {
+                    val resp = conn.inputStream.bufferedReader().use { it.readText() }.trim()
+                    if (resp.startsWith("{")) {
+                        val root = JSONObject(resp)
+                        val userObj = root.optJSONObject("user") ?: root.optJSONObject("data") ?: root
+                        val firstName = userObj.optString("firstName", userObj.optString("prenom", "")).trim()
+                        val lastName = userObj.optString("lastName", userObj.optString("nom", "")).trim()
+                        val fullName = userObj.optString("fullName", userObj.optString("name", "")).trim()
+                        val email = userObj.optString("email", userObj.optString("mail", "")).trim()
+                        val studentId = userObj.optString("studentId", userObj.optString("id", "")).trim()
+                        val program = userObj.optString("program", userObj.optString("filiere", "")).trim()
+
+                        if (firstName.isNotBlank() || lastName.isNotBlank() || fullName.isNotBlank()) {
+                            return StudentProfile(
+                                fullName = if (fullName.isNotBlank()) fullName else "$firstName $lastName".trim(),
+                                firstName = firstName,
+                                lastName = lastName,
+                                email = email,
+                                studentId = studentId,
+                                program = program
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Try next
+            }
+        }
+        return null
+    }
+
+    private fun fetchStudentProfileFromHome(): StudentProfile? {
+        val cookieManager = CookieManager.getInstance()
+        val wwwCookies = cookieManager.getCookie("https://www.myefrei.fr") ?: ""
+        val authCookies = cookieManager.getCookie("https://auth.myefrei.fr") ?: ""
+
+        val cookieMap = mutableMapOf<String, String>()
+        for (cookieStr in listOf(authCookies, wwwCookies)) {
+            if (cookieStr.isNotBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val trimmed = part.trim()
+                    val eqIdx = trimmed.indexOf('=')
+                    if (eqIdx > 0) {
+                        cookieMap[trimmed.substring(0, eqIdx).trim()] = trimmed
+                    }
+                }
+            }
+        }
+        val mergedCookies = cookieMap.values.joinToString("; ")
+
+        val urls = listOf(
+            "https://www.myefrei.fr/portal/student/home",
+            "https://www.myefrei.fr/portal/student/planning"
+        )
+
+        for (urlStr in urls) {
+            try {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    instanceFollowRedirects = false
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    setRequestProperty("Referer", "https://www.myefrei.fr/")
+                    if (mergedCookies.isNotBlank()) setRequestProperty("Cookie", mergedCookies)
+                }
+
+                if (conn.responseCode in 200..299) {
+                    val html = conn.inputStream.bufferedReader().use { it.readText() }
+                    val scriptIdx = html.indexOf("<script id=\"__NEXT_DATA__\" type=\"application/json\">")
+                    if (scriptIdx != -1) {
+                        val start = html.indexOf('>', scriptIdx) + 1
+                        val end = html.indexOf("</script>", start)
+                        if (start != -1 && end > start) {
+                            val jsonStr = html.substring(start, end).trim()
+                            val root = JSONObject(jsonStr)
+                            val props = root.optJSONObject("props")
+                            val pageProps = props?.optJSONObject("pageProps")
+                            val userObj = pageProps?.optJSONObject("user")
+                                ?: pageProps?.optJSONObject("userInfo")
+                                ?: props?.optJSONObject("user")
+                                ?: root.optJSONObject("user")
+
+                            if (userObj != null) {
+                                val firstName = userObj.optString("firstName", userObj.optString("prenom", "")).trim()
+                                val lastName = userObj.optString("lastName", userObj.optString("nom", "")).trim()
+                                val fullName = userObj.optString("fullName", userObj.optString("name", "")).trim()
+                                val email = userObj.optString("email", userObj.optString("mail", "")).trim()
+                                val studentId = userObj.optString("studentId", userObj.optString("id", "")).trim()
+                                val program = userObj.optString("program", userObj.optString("filiere", "")).trim()
+
+                                if (firstName.isNotBlank() || lastName.isNotBlank() || fullName.isNotBlank()) {
+                                    return StudentProfile(
+                                        fullName = if (fullName.isNotBlank()) fullName else "$firstName $lastName".trim(),
+                                        firstName = firstName,
+                                        lastName = lastName,
+                                        email = email,
+                                        studentId = studentId,
+                                        program = program
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Try next
+            }
+        }
+        return null
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -2061,9 +2884,11 @@ class MainActivity : AppCompatActivity() {
                     val c = cm.getCookie("https://www.myefrei.fr") ?: ""
                     if (c.contains("myefrei.sid")) {
                         getSharedPreferences("myefoss_prefs", MODE_PRIVATE).edit().putBoolean("is_logged_out", false).apply()
+                        showSessionExpiredBanner(false)
                         loginWebView.visibility = View.GONE
                         showScreen(Screen.APP)
                         loadAgendaForCurrentWeek()
+                        fetchAndDisplayUserProfile()
                         return true
                     }
                 }
@@ -2132,6 +2957,7 @@ class MainActivity : AppCompatActivity() {
                 lastFetchedMonthKey = targetMonthKey
 
                 if (freshCourses.isNotEmpty()) {
+                    showSessionExpiredBanner(false)
                     OfflineCacheManager.saveCourses(this@MainActivity, freshCourses)
                     allCachedCourses = OfflineCacheManager.loadCourses(this@MainActivity)
                     displayPlanning(allCachedCourses)
@@ -2139,6 +2965,7 @@ class MainActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
+                    showSessionExpiredBanner(true)
                     startSilentReauth()
                 } else if (allCachedCourses.isEmpty()) {
                     Toast.makeText(this@MainActivity, "Hors-ligne ou indisponible", Toast.LENGTH_SHORT).show()
@@ -2154,11 +2981,17 @@ class MainActivity : AppCompatActivity() {
         loginWebView.settings.javaScriptEnabled = true
         loginWebView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val cm = CookieManager.getInstance()
-                val c = cm.getCookie("https://www.myefrei.fr") ?: ""
-                if (c.contains("myefrei.sid")) {
-                    loadAgendaForCurrentWeek()
-                    return true
+                val url = request?.url?.toString() ?: ""
+                // Only consider successful re-auth once redirected to an authenticated destination
+                if (url.startsWith("https://www.myefrei.fr/home") ||
+                    url.startsWith("https://www.myefrei.fr/dashboard") ||
+                    url.startsWith("https://www.myefrei.fr/portal")) {
+                    val cm = CookieManager.getInstance()
+                    val c = cm.getCookie("https://www.myefrei.fr") ?: ""
+                    if (c.contains("myefrei.sid")) {
+                        loadAgendaForCurrentWeek()
+                        return true
+                    }
                 }
                 return false
             }
@@ -2547,7 +3380,7 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawer(GravityCompat.START)
             return
         }
-        if (tabContainerGrades.visibility == View.VISIBLE || tabContainerAbsences.visibility == View.VISIBLE) {
+        if (tabContainerGrades.visibility == View.VISIBLE || tabContainerAbsences.visibility == View.VISIBLE || tabContainerLxp.visibility == View.VISIBLE) {
             showScolarityTab()
             return
         }
