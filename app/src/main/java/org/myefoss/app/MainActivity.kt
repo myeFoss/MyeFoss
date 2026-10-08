@@ -2152,8 +2152,8 @@ class MainActivity : AppCompatActivity() {
             val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
             val tvDate: TextView = view.findViewById(R.id.tvActionDate)
             val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
-            val ivThumbnail: com.google.android.material.imageview.ShapeableImageView = view.findViewById(R.id.ivActionThumbnail)
-            val btnDetails: MaterialButton = view.findViewById(R.id.btnDetailsAction)
+            val layoutImageContainer: View = view.findViewById(R.id.layoutActionImageContainer)
+            val ivIntegrated: ImageView = view.findViewById(R.id.ivActionIntegrated)
             val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
 
             tvCategory.text = if (action.category.isNotBlank()) action.category else "Formation / Atelier"
@@ -2203,7 +2203,7 @@ class MainActivity : AppCompatActivity() {
                 tvExtra.visibility = View.GONE
             }
 
-            // Discreet Thumbnail Image
+            // Discreet Integrated Image with smooth lateral fade
             if (action.imageUrl.isNotBlank()) {
                 val rawUrl = action.imageUrl
                 val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
@@ -2231,23 +2231,20 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     if (bitmap != null) {
-                        ivThumbnail.setImageBitmap(bitmap)
-                        ivThumbnail.visibility = View.VISIBLE
+                        ivIntegrated.setImageBitmap(bitmap)
+                        layoutImageContainer.visibility = View.VISIBLE
                     }
                 }
             } else {
-                ivThumbnail.visibility = View.GONE
+                layoutImageContainer.visibility = View.GONE
             }
 
-            // Click card or details button to open details sheet
-            val openSheet = {
+            // Click card to open full details sheet
+            view.setOnClickListener {
                 LxpDetailsBottomSheet.newInstance(action) { act ->
                     handleActionRegistration(act)
                 }.show(supportFragmentManager, "LxpDetails_${action.id}")
             }
-
-            view.setOnClickListener { openSheet() }
-            btnDetails.setOnClickListener { openSheet() }
 
             btnRegister.setOnClickListener {
                 handleActionRegistration(action)

@@ -13,185 +13,185 @@
     app:strokeColor="?attr/colorOutlineVariant"
     app:cardBackgroundColor="?attr/colorSurface">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="wrap_content">
 
-        <!-- Top row: Category tag + XP badge + Status chip -->
+        <!-- Discrete right-side integrated image with smooth fade -->
+        <FrameLayout
+            android:id="@+id/layoutActionImageContainer"
+            android:layout_width="160dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/ivActionIntegrated"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:alpha="0.22" />
+
+            <!-- Smooth gradient fade from content on left into image -->
+            <View
+                android:id="@+id/ivActionFadeOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_lxp_fade_light" />
+
+        </FrameLayout>
+
+        <!-- Main Card Content -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tvActionCategory"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="12sp"
-                android:text="Pédagogie / Ateliers" />
-
-            <!-- Dedicated XP Badge -->
-            <TextView
-                android:id="@+id/tvActionXpBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_xp_chip"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:visibility="gone"
-                android:text="+10 XP" />
-
-            <!-- Status Chip -->
-            <TextView
-                android:id="@+id/tvActionStatusChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/colorSecondaryContainer"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
-                android:textColor="?attr/colorOnSecondaryContainer"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:text="Ouvert" />
-
-        </LinearLayout>
-
-        <!-- Body row: Title + Description on left, Discrete Thumbnail on right -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
+            <!-- Top row: Category tag + XP badge + Status chip -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <!-- Action Title -->
                 <TextView
-                    android:id="@+id/tvActionTitle"
-                    android:layout_width="match_parent"
+                    android:id="@+id/tvActionCategory"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="12sp"
+                    android:text="Pédagogie / Ateliers" />
+
+                <!-- Dedicated XP Badge: perfectly centered text and padding -->
+                <TextView
+                    android:id="@+id/tvActionXpBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_xp_chip"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:textColor="?attr/colorOnPrimaryContainer"
+                    android:textSize="11sp"
                     android:fontFamily="sans-serif-bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="15sp"
-                    android:text="Titre de l'action LXP" />
+                    android:visibility="gone"
+                    android:text="+10 XP" />
 
-                <!-- Action Description -->
+                <!-- Status Chip -->
                 <TextView
-                    android:id="@+id/tvActionDescription"
-                    android:layout_width="match_parent"
+                    android:id="@+id/tvActionStatusChip"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="13sp"
-                    android:maxLines="3"
-                    android:ellipsize="end"
-                    android:text="Description courte de l'action ou des objectifs de la session..." />
+                    android:background="?attr/colorSecondaryContainer"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:textColor="?attr/colorOnSecondaryContainer"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:text="Ouvert" />
 
             </LinearLayout>
 
-            <!-- Discrete Thumbnail (compact, rounded corners, modern) -->
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivActionThumbnail"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_marginStart="12dp"
-                android:scaleType="centerCrop"
-                android:visibility="gone"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
-
-        </LinearLayout>
-
-        <!-- Metadata row: Date, Room / Speaker -->
-        <LinearLayout
-            android:id="@+id/layoutActionMeta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_calendar"
-                app:tint="?attr/colorOutline" />
-
+            <!-- Action Title -->
             <TextView
-                android:id="@+id/tvActionDate"
-                android:layout_width="wrap_content"
+                android:id="@+id/tvActionTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
-                android:text="Octobre 2026" />
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif-bold"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="15sp"
+                android:text="Titre de l'action LXP" />
 
-            <View
-                android:id="@+id/viewMetaDivider"
-                android:layout_width="1dp"
-                android:layout_height="12dp"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="8dp"
-                android:background="?attr/colorOutlineVariant" />
-
+            <!-- Action Description -->
             <TextView
-                android:id="@+id/tvActionExtra"
-                android:layout_width="0dp"
+                android:id="@+id/tvActionDescription"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:maxLines="1"
-                android:ellipsize="end"
+                android:layout_marginTop="6dp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
-                android:text="Places restantes / Intervenant" />
-
-        </LinearLayout>
-
-        <!-- Action buttons row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="end|center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDetailsAction"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Détails"
-                android:textSize="13sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRegisterAction"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="S'inscrire"
                 android:textSize="13sp"
-                app:cornerRadius="12dp" />
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:text="Description courte de l'action ou des objectifs de la session..." />
+
+            <!-- Metadata row: Date, Room / Speaker -->
+            <LinearLayout
+                android:id="@+id/layoutActionMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="?attr/colorOutline" />
+
+                <TextView
+                    android:id="@+id/tvActionDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    android:text="Octobre 2026" />
+
+                <View
+                    android:id="@+id/viewMetaDivider"
+                    android:layout_width="1dp"
+                    android:layout_height="12dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <TextView
+                    android:id="@+id/tvActionExtra"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    android:text="Places restantes / Intervenant" />
+
+            </LinearLayout>
+
+            <!-- Action buttons row: Register only (tapping anywhere opens details) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="end|center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRegisterAction"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="S'inscrire"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
-    </LinearLayout>
+    </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>
