@@ -17,29 +17,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Discrete right-side integrated image with smooth fade -->
-        <FrameLayout
-            android:id="@+id/layoutActionImageContainer"
-            android:layout_width="160dp"
+        <!-- Discrete Corner-Fading Image (no white wash, fades directly to alpha) -->
+        <org.myefoss.app.CornerFadingImageView
+            android:id="@+id/ivActionCornerFading"
+            android:layout_width="150dp"
             android:layout_height="match_parent"
             android:layout_gravity="end"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/ivActionIntegrated"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:alpha="0.22" />
-
-            <!-- Smooth gradient fade from content on left into image -->
-            <View
-                android:id="@+id/ivActionFadeOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_lxp_fade_light" />
-
-        </FrameLayout>
+            android:scaleType="centerCrop"
+            android:alpha="0.40"
+            android:visibility="gone" />
 
         <!-- Main Card Content -->
         <LinearLayout
@@ -65,7 +51,7 @@
                     android:textSize="12sp"
                     android:text="Pédagogie / Ateliers" />
 
-                <!-- Dedicated XP Badge: perfectly centered text and padding -->
+                <!-- Dedicated XP Badge: perfectly centered text and single line -->
                 <TextView
                     android:id="@+id/tvActionXpBadge"
                     android:layout_width="wrap_content"
@@ -74,6 +60,8 @@
                     android:background="@drawable/bg_xp_chip"
                     android:gravity="center"
                     android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:singleLine="true"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
                     android:paddingTop="5dp"
@@ -92,6 +80,8 @@
                     android:background="?attr/colorSecondaryContainer"
                     android:gravity="center"
                     android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:singleLine="true"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
                     android:paddingTop="5dp"

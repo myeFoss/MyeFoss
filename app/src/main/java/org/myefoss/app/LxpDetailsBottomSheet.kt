@@ -82,7 +82,8 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
 
         // XP Badge
         if (act.xpPoints.isNotBlank()) {
-            dialogLxpXpBadge.text = if (act.xpPoints.startsWith("+")) act.xpPoints else "+${act.xpPoints}"
+            val cleanXp = act.xpPoints.replace(Regex("\\s+"), " ").trim()
+            dialogLxpXpBadge.text = if (cleanXp.startsWith("+")) cleanXp else "+$cleanXp"
             dialogLxpXpBadge.visibility = View.VISIBLE
         } else {
             dialogLxpXpBadge.visibility = View.GONE

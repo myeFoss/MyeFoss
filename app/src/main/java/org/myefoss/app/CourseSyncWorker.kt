@@ -185,12 +185,18 @@ class CourseSyncWorker(
         val code = conn.responseCode
         if (code in 200..299) {
             val response = conn.inputStream.bufferedReader().use { it.readText() }
-            val jsonArray = JSONArray(response)
-            val list = mutableListOf<CourseEvent>()
-            for (i in 0 until jsonArray.length()) {
-                list.add(CourseEvent.fromJson(jsonArray.getJSONObject(i)))
+            if (response.trim().startsWith("[")) {
+                val jsonArray = JSONArray(response)
+                val list = mutableListOf<CourseEvent>()
+                for (i in 0 until jsonArray.length()) {
+                    list.add(CourseEvent.fromJson(jsonArray.getJSONObject(i)))
+                }
+                return list
+            } else if (response.contains("/auth/efrei") || response.contains("login")) {
+                SessionNotificationManager.notifySessionExpired(context)
             }
-            return list
+        } else if (code == 401 || code == 403) {
+            SessionNotificationManager.notifySessionExpired(context)
         }
         return emptyList()
     }

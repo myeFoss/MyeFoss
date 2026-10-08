@@ -42,6 +42,11 @@ data class LxpAction(
                 if (xpNum > 0) {
                     xp = "$xpNum XP"
                 }
+            } else {
+                xp = xp.replace(Regex("\\s+"), " ").trim()
+            }
+            if (xp.isNotBlank() && !xp.startsWith("+")) {
+                xp = "+$xp"
             }
 
             val detailUrl = json.optString("url", json.optString("detailUrl", ""))

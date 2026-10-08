@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbPaletteMonet: android.widget.RadioButton
     private lateinit var dividerMonet: View
     private lateinit var switchCourseNotifications: com.google.android.material.materialswitch.MaterialSwitch
+    private lateinit var switchSessionNotifications: com.google.android.material.materialswitch.MaterialSwitch
     private lateinit var textAppVersion: TextView
     private lateinit var btnCheckUpdates: MaterialButton
 
@@ -228,6 +229,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleUpdateIntent(intent: Intent) {
+        if (intent.getBooleanExtra("EXTRA_SHOW_REAUTH", false)) {
+            intent.removeExtra("EXTRA_SHOW_REAUTH")
+            startSilentReauth()
+            return
+        }
         if (intent.getBooleanExtra("EXTRA_SHOW_UPDATE", false)) {
             intent.removeExtra("EXTRA_SHOW_UPDATE")
             lifecycleScope.launch {
@@ -322,6 +328,7 @@ class MainActivity : AppCompatActivity() {
         rbPaletteMonet = findViewById(R.id.rbPaletteMonet)
         dividerMonet = findViewById(R.id.dividerMonet)
         switchCourseNotifications = findViewById(R.id.switchCourseNotifications)
+        switchSessionNotifications = findViewById(R.id.switchSessionNotifications)
         textAppVersion = findViewById(R.id.textAppVersion)
         btnCheckUpdates = findViewById(R.id.btnCheckUpdates)
 
@@ -688,26 +695,44 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 3. Course Change Notifications
+        // 3. Notifications: Course Changes & Session Expiration
         val isNotifEnabled = prefs.getBoolean("notify_course_changes", false)
         switchCourseNotifications.isChecked = isNotifEnabled
+
+        val isSessionNotifEnabled = prefs.getBoolean("notify_session_expired", true)
+        switchSessionNotifications.isChecked = isSessionNotifEnabled
+
+        fun checkNotificationPermissionIfNeeded() {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+                }
+            }
+        }
 
         switchCourseNotifications.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("notify_course_changes", isChecked).apply()
 
             if (isChecked) {
-                // Request POST_NOTIFICATIONS permission on Android 13+ if needed
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
-                    }
-                }
+                checkNotificationPermissionIfNeeded()
                 CourseSyncWorker.createNotificationChannel(this)
                 scheduleCourseSyncWorker()
                 Toast.makeText(this, "Notifications de cours activées", Toast.LENGTH_SHORT).show()
             } else {
                 androidx.work.WorkManager.getInstance(this).cancelUniqueWork(CourseSyncWorker.WORK_NAME)
                 Toast.makeText(this, "Notifications désactivées", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        switchSessionNotifications.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("notify_session_expired", isChecked).apply()
+            if (isChecked) {
+                checkNotificationPermissionIfNeeded()
+                SessionNotificationManager.createNotificationChannel(this)
+                Toast.makeText(this, "Alerte de session expirée activée", Toast.LENGTH_SHORT).show()
+            } else {
+                SessionNotificationManager.cancelNotification(this)
+                Toast.makeText(this, "Alerte de session désactivée", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -2152,16 +2177,16 @@ class MainActivity : AppCompatActivity() {
             val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
             val tvDate: TextView = view.findViewById(R.id.tvActionDate)
             val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
-            val layoutImageContainer: View = view.findViewById(R.id.layoutActionImageContainer)
-            val ivIntegrated: ImageView = view.findViewById(R.id.ivActionIntegrated)
+            val ivCornerFading: CornerFadingImageView = view.findViewById(R.id.ivActionCornerFading)
             val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
 
             tvCategory.text = if (action.category.isNotBlank()) action.category else "Formation / Atelier"
             tvTitle.text = action.title
 
-            // Dedicated XP Badge
+            // Dedicated XP Badge (clean, single-line, no \n)
             if (action.xpPoints.isNotBlank()) {
-                tvXpBadge.text = if (action.xpPoints.startsWith("+")) action.xpPoints else "+${action.xpPoints}"
+                val cleanXp = action.xpPoints.replace(Regex("\\s+"), " ").trim()
+                tvXpBadge.text = if (cleanXp.startsWith("+")) cleanXp else "+$cleanXp"
                 tvXpBadge.visibility = View.VISIBLE
             } else {
                 tvXpBadge.visibility = View.GONE
@@ -2203,7 +2228,7 @@ class MainActivity : AppCompatActivity() {
                 tvExtra.visibility = View.GONE
             }
 
-            // Discreet Integrated Image with smooth lateral fade
+            // Discreet Corner-Fading Image (fades smoothly to transparent alpha, no white gradient)
             if (action.imageUrl.isNotBlank()) {
                 val rawUrl = action.imageUrl
                 val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
@@ -2231,12 +2256,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     if (bitmap != null) {
-                        ivIntegrated.setImageBitmap(bitmap)
-                        layoutImageContainer.visibility = View.VISIBLE
+                        ivCornerFading.setImageBitmap(bitmap)
+                        ivCornerFading.visibility = View.VISIBLE
                     }
                 }
             } else {
-                layoutImageContainer.visibility = View.GONE
+                ivCornerFading.visibility = View.GONE
             }
 
             // Click card to open full details sheet
@@ -2518,9 +2543,10 @@ class MainActivity : AppCompatActivity() {
                             
                             // Extract XP points
                             var xp = '';
-                            var xpMatch = fullText.match(/([+]?\s*\d+\s*(?:XP|xp|LXP|lxp|points|pts))/i);
+                            var xpMatch = fullText.match(/([+]?\s*\d+\s*(?:XP|xp|LXP|lxp|points|pts|point|pt))\b/i);
                             if (xpMatch) {
-                                xp = xpMatch[1].trim();
+                                xp = xpMatch[1].replace(/\s+/g, ' ').trim();
+                                if (!xp.startsWith('+')) xp = '+' + xp;
                             }
 
                             // Extract date or period
@@ -2711,6 +2737,11 @@ class MainActivity : AppCompatActivity() {
     private fun showSessionExpiredBanner(show: Boolean) {
         runOnUiThread {
             bannerSessionExpired.visibility = if (show) View.VISIBLE else View.GONE
+            if (show) {
+                SessionNotificationManager.notifySessionExpired(this@MainActivity)
+            } else {
+                SessionNotificationManager.cancelNotification(this@MainActivity)
+            }
         }
     }
 
