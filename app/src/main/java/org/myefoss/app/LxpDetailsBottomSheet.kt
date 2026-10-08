@@ -161,9 +161,28 @@ class LxpDetailsBottomSheet : BottomSheetDialogFragment() {
 
         if (act.maxParticipants > 0) {
             layoutDialogLxpCapacity.visibility = View.VISIBLE
-            dialogLxpCapacity.text = "${act.currentParticipants}/${act.maxParticipants} participants"
+            val placesLeft = act.maxParticipants - act.currentParticipants
+            dialogLxpCapacity.text = if (placesLeft > 0) {
+                "${act.currentParticipants}/${act.maxParticipants} participants ($placesLeft place${if (placesLeft > 1) "s" else ""} restante${if (placesLeft > 1) "s" else ""})"
+            } else {
+                "${act.currentParticipants}/${act.maxParticipants} participants (Complet)"
+            }
+        } else if (act.currentParticipants > 0) {
+            layoutDialogLxpCapacity.visibility = View.VISIBLE
+            dialogLxpCapacity.text = "${act.currentParticipants} inscrit${if (act.currentParticipants > 1) "s" else ""}"
         } else {
             layoutDialogLxpCapacity.visibility = View.GONE
+        }
+
+        val layoutDialogLxpPointsRow: View = view.findViewById(R.id.layoutDialogLxpPointsRow)
+        val dialogLxpPointsDetail: TextView = view.findViewById(R.id.dialogLxpPointsDetail)
+
+        if (act.xpPoints.isNotBlank()) {
+            val cleanXp = act.xpPoints.replace(Regex("\\s+"), " ").trim()
+            layoutDialogLxpPointsRow.visibility = View.VISIBLE
+            dialogLxpPointsDetail.text = "$cleanXp à valider"
+        } else {
+            layoutDialogLxpPointsRow.visibility = View.GONE
         }
 
         btnDialogLxpClose.setOnClickListener { dismiss() }

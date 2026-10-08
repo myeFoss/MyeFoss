@@ -20,19 +20,22 @@
         <!-- Discrete Corner-Fading Image (no white wash, fades directly to alpha) -->
         <org.myefoss.app.CornerFadingImageView
             android:id="@+id/ivActionCornerFading"
-            android:layout_width="150dp"
+            android:layout_width="140dp"
             android:layout_height="match_parent"
             android:layout_gravity="end"
             android:scaleType="centerCrop"
-            android:alpha="0.40"
+            android:alpha="0.35"
             android:visibility="gone" />
 
-        <!-- Main Card Content -->
+        <!-- Main Card Content: Compact, clean, streamlined -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp">
 
             <!-- Top row: Category tag + XP badge + Status chip -->
             <LinearLayout
@@ -49,9 +52,11 @@
                     android:fontFamily="sans-serif-medium"
                     android:textColor="?attr/colorPrimary"
                     android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:text="Pédagogie / Ateliers" />
 
-                <!-- Dedicated XP Badge: perfectly centered text and single line -->
+                <!-- Dedicated XP Badge: perfectly centered single-line pill -->
                 <TextView
                     android:id="@+id/tvActionXpBadge"
                     android:layout_width="wrap_content"
@@ -64,8 +69,8 @@
                     android:singleLine="true"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
-                    android:paddingTop="5dp"
-                    android:paddingBottom="5dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif-bold"
@@ -84,8 +89,8 @@
                     android:singleLine="true"
                     android:paddingStart="9dp"
                     android:paddingEnd="9dp"
-                    android:paddingTop="5dp"
-                    android:paddingBottom="5dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:textColor="?attr/colorOnSecondaryContainer"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif-bold"
@@ -93,7 +98,7 @@
 
             </LinearLayout>
 
-            <!-- Action Title -->
+            <!-- Action Title (Clear & prominent) -->
             <TextView
                 android:id="@+id/tvActionTitle"
                 android:layout_width="match_parent"
@@ -102,26 +107,15 @@
                 android:fontFamily="sans-serif-bold"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="15sp"
+                android:maxLines="2"
+                android:ellipsize="end"
                 android:text="Titre de l'action LXP" />
 
-            <!-- Action Description -->
-            <TextView
-                android:id="@+id/tvActionDescription"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="13sp"
-                android:maxLines="3"
-                android:ellipsize="end"
-                android:text="Description courte de l'action ou des objectifs de la session..." />
-
-            <!-- Metadata row: Date, Room / Speaker -->
+            <!-- Bottom Row: Essential Date info & Quick Register button -->
             <LinearLayout
-                android:id="@+id/layoutActionMeta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -133,50 +127,26 @@
 
                 <TextView
                     android:id="@+id/tvActionDate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="12sp"
-                    android:text="Octobre 2026" />
-
-                <View
-                    android:id="@+id/viewMetaDivider"
-                    android:layout_width="1dp"
-                    android:layout_height="12dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <TextView
-                    android:id="@+id/tvActionExtra"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:maxLines="1"
-                    android:ellipsize="end"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp"
-                    android:text="Places restantes / Intervenant" />
-
-            </LinearLayout>
-
-            <!-- Action buttons row: Register only (tapping anywhere opens details) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="end|center_vertical"
-                android:orientation="horizontal">
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="Octobre 2026" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRegisterAction"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="36dp"
                     android:text="S'inscrire"
-                    android:textSize="13sp"
-                    app:cornerRadius="12dp" />
+                    android:textSize="12sp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    app:cornerRadius="10dp" />
 
             </LinearLayout>
 

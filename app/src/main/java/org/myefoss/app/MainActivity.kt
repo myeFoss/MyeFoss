@@ -2174,9 +2174,7 @@ class MainActivity : AppCompatActivity() {
             val tvXpBadge: TextView = view.findViewById(R.id.tvActionXpBadge)
             val tvStatusChip: TextView = view.findViewById(R.id.tvActionStatusChip)
             val tvTitle: TextView = view.findViewById(R.id.tvActionTitle)
-            val tvDescription: TextView = view.findViewById(R.id.tvActionDescription)
             val tvDate: TextView = view.findViewById(R.id.tvActionDate)
-            val tvExtra: TextView = view.findViewById(R.id.tvActionExtra)
             val ivCornerFading: CornerFadingImageView = view.findViewById(R.id.ivActionCornerFading)
             val btnRegister: MaterialButton = view.findViewById(R.id.btnRegisterAction)
 
@@ -2190,13 +2188,6 @@ class MainActivity : AppCompatActivity() {
                 tvXpBadge.visibility = View.VISIBLE
             } else {
                 tvXpBadge.visibility = View.GONE
-            }
-
-            if (action.description.isNotBlank()) {
-                tvDescription.visibility = View.VISIBLE
-                tvDescription.text = action.description
-            } else {
-                tvDescription.visibility = View.GONE
             }
 
             if (action.isRegistered) {
@@ -2214,19 +2205,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             tvDate.text = if (action.dateOrPeriod.isNotBlank()) action.dateOrPeriod else "Date à venir"
-
-            val extraParts = mutableListOf<String>()
-            if (action.teacherOrSpeaker.isNotBlank()) extraParts.add(action.teacherOrSpeaker)
-            if (action.locationOrRoom.isNotBlank()) extraParts.add(action.locationOrRoom)
-            if (action.maxParticipants > 0) {
-                extraParts.add("${action.currentParticipants}/${action.maxParticipants} inscrits")
-            }
-            if (extraParts.isNotEmpty()) {
-                tvExtra.visibility = View.VISIBLE
-                tvExtra.text = extraParts.joinToString(" • ")
-            } else {
-                tvExtra.visibility = View.GONE
-            }
 
             // Discreet Corner-Fading Image (fades smoothly to transparent alpha, no white gradient)
             if (action.imageUrl.isNotBlank()) {
